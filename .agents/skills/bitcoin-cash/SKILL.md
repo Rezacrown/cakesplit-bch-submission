@@ -59,13 +59,22 @@ BCH uses the **UTXO model**, not EVM accounts/global storage. Fetch the relevant
 - Transaction Lifecycle (0-conf, mempool, unconfirmed chains): https://cashscript.org/docs/guides/lifecycle
 - Adversarial Analysis (MEV, double-spends, covenant attacks): https://cashscript.org/docs/guides/adversarial
 
-## 6. Low-Level Libraries, Indexers & Tooling
+## 6. XO Stack & XO Templates (General Protocols)
+
+- XO Stack Docs: https://stack.xo.cash/ | Getting Started: https://stack.xo.cash/getting-started.html
+- XO Stack API Reference: https://stack.xo.cash/api/ | Types: https://stack.xo.cash/api/@xo-cash/types.html
+- Writing XO Templates Guide: https://stack.xo.cash/blog/2026-08-24-Vision-to-Reality-6-Writing-Templates
+- XO Repositories (`@xo-cash` `0.1.0-next.xxx` on npm): https://gitlab.com/GeneralProtocols/xo
+- XO Template Interface: https://gitlab.com/GeneralProtocols/xo/types/-/blob/development/source/template.ts
+- XO Debug Tool (inspect invitations): https://blaze.xo.cash/
+
+## 7. Low-Level Libraries, Indexers & Tooling
 
 - Libauth (zero-dependency keys, VM, encoding): https://libauth.org/
 - Bitauth IDE (script/stack debugger): https://ide.bitauth.com/
 - CashScript Playground: https://playground.cashscript.org/
 - Ecosystem Directory (Chaingraph, Fulcrum, Oracles): https://developers.cash/
-- Chipnet Faucets (free tBCH): https://tbch.googol.cash/ | https://faucet.paytaca.com/
+- Chipnet Faucets (free tBCH): https://tbch.googol.cash/ | https://chipnet.bch.ninja/ | https://faucet.paytaca.com/
 - BCH BLAZE 2026 Hackathon Portal: https://bchblaze.cash/
 
 ## Critical Invariants (Do Not Violate)
@@ -73,4 +82,4 @@ BCH uses the **UTXO model**, not EVM accounts/global storage. Fetch the relevant
 - **Dust limit:** Plain P2PKH outputs require `>= 546` satoshis; outputs carrying CashTokens or covenants require `>= ~800–1600` satoshis (safe default: `1000` sats).
 - **WizardConnect vs WalletConnect:** CashScript `generateWcTransactionObject()` covers both; WizardConnect additionally requires `inputPaths: [inputIndex, pathName, addressIndex][]` matching final input order, and does not provide generic message signing.
 - **Address types:** Use CashTokens-aware addresses (`bitcoincash:z...`) whenever outputs can hold tokens; `p2sh32` is CashScript's secure default (confirm target wallet support if mixing `p2sh20`/`p2sh32`/`p2s`).
-- **Safe workflow:** Develop and test against `MockNetworkProvider` → verify on `chipnet` (free faucet) → switch provider to `mainnet` only after contract invariants and fee math are verified.
+- **Safe workflow:** Develop and test against `MockNetworkProvider` (or `libauth` VM vectors for XO) → verify on `chipnet` (free faucet) → switch provider to `mainnet` only after contract invariants and fee math are verified.
