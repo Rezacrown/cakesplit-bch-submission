@@ -68,6 +68,7 @@ When friends eat out or share a group bill, someone always has to front the enti
 - **Widget Factory Google Slides:** https://docs.google.com/presentation/d/1MWgxqhW43VwhE9tCDykVvCvQUX3ljzvHgSwMqDwQqhs/edit?usp=sharing
 - **Public Repository:** https://github.com/Rezacrown/cakesplit-bch-submission
 - **XO Template ID:** `c52aac6dcb3a27a8d2f915f1c20fbf806548041e2ea88f6abc6fcca9cd8f4755`
+- **Build with XO Developer Feedback:** [`docs/XO_FEEDBACK.md`](docs/XO_FEEDBACK.md)
 - **EMBER2026 CashTokens Address:** `bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe`
 - **Tracks & Bounty:** Build with XO (General Protocols), Mainnet Track, Media Track, Community Choice (`EMBER2026`)
 
