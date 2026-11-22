@@ -2,7 +2,7 @@ import {
   ElectrumClient,
   type ElectrumClientEvents,
 } from "@electrum-cash/network";
-import { hexToBin } from "@bitauth/libauth";
+import { binToHex, decodeTransactionBch, hexToBin } from "@bitauth/libauth";
 import { scriptToScriptHash } from "@xo-cash/utils";
 import { cashAddressToLockingHex, type BchNetwork } from "@/lib/bch/address";
 import type { CompiledCakeSplitContract, UtxoRef } from "@/lib/bch/cakesplit-contract";
@@ -31,8 +31,30 @@ interface ElectrumListUnspentEntry {
   token_data?: unknown;
 }
 
+interface ElectrumHistoryEntry {
+  tx_hash: string;
+  height: number;
+}
+
 export interface OnChainUtxo extends UtxoRef {
   /** Block height (`0` or `-1` means 0-conf unconfirmed in mempool). */
+  height: number;
+  isUnconfirmed: boolean;
+}
+
+export interface OnChainHistoryTx {
+  txid: string;
+  height: number;
+  isUnconfirmed: boolean;
+}
+
+export interface OnChainFinalResolution {
+  kind: "settled" | "cancelled";
+  txid: string;
+  outputSatoshis: bigint;
+  feeSatoshis: bigint;
+  inputCount: number;
+  destinationLockingHex: string;
   height: number;
   isUnconfirmed: boolean;
 }
@@ -43,6 +65,8 @@ export interface ContractPotState {
   confirmedSatoshis: bigint;
   unconfirmedSatoshis: bigint;
   progress: PotProgress;
+  history: OnChainHistoryTx[];
+  resolution: OnChainFinalResolution | null;
   fetchedAt: number;
 }
 
@@ -146,38 +170,144 @@ export async function fetchScriptHashUtxos(
 }
 
 /**
+ * Classifies a raw BCH transaction hex involving a CakeSplit Bill Pot contract.
+ * Returns `null` if the tx is only a deposit paying into the pot; otherwise returns
+ * `"settled"` (output 0 paid the locked merchant >= payout) or `"cancelled"` (refund).
+ */
+export function classifyPotResolutionTx(
+  contract: CompiledCakeSplitContract,
+  rawTxHex: string,
+  entry: OnChainHistoryTx,
+): OnChainFinalResolution | null {
+  const decoded = decodeTransactionBch(hexToBin(rawTxHex.trim()));
+  if (typeof decoded === "string" || decoded.outputs.length === 0) {
+    return null;
+  }
+
+  // Deposit or chipIn transactions create an output locked to the Bill Pot itself.
+  const paysIntoPot = decoded.outputs.some(
+    (output) => binToHex(output.lockingBytecode) === contract.lockingBytecodeHex,
+  );
+  if (paysIntoPot) {
+    return null;
+  }
+
+  const out0 = decoded.outputs[0];
+  const destinationLockingHex = binToHex(out0.lockingBytecode);
+  const isSettledToMerchant =
+    destinationLockingHex === contract.merchantLockingHex &&
+    out0.valueSatoshis >= contract.merchantPayoutSatoshis;
+
+  return {
+    kind: isSettledToMerchant ? "settled" : "cancelled",
+    txid: entry.txid,
+    outputSatoshis: out0.valueSatoshis,
+    feeSatoshis: isSettledToMerchant ? contract.settlementFeeSatoshis : 0n,
+    inputCount: decoded.inputs.length,
+    destinationLockingHex,
+    height: entry.height,
+    isUnconfirmed: entry.isUnconfirmed,
+  };
+}
+
+/**
  * Fetches live Bill Pot UTXOs + progress metrics for a compiled CakeSplit contract.
- * Ready to drop straight into a TanStack Query `queryFn` with 3-5s polling!
+ * When all UTXOs have been spent (`utxos.length === 0`), queries on-chain scripthash
+ * history on the same Fulcrum connection to restore Settled / Refunded receipts.
  */
 export async function fetchContractPotState(
   contract: CompiledCakeSplitContract,
   customServers?: ElectrumServerEndpoint[],
 ): Promise<ContractPotState> {
-  const utxos = await fetchScriptHashUtxos(
-    contract.scriptHash,
+  return withElectrumClient(
     contract.network,
+    async (client) => {
+      const unspentResp = await client.request(
+        "blockchain.scripthash.listunspent",
+        contract.scriptHash,
+      );
+      if (unspentResp instanceof Error) {
+        throw new Error(`Electrum listunspent failed: ${unspentResp.message}`);
+      }
+      if (!Array.isArray(unspentResp)) {
+        throw new Error(
+          `Unexpected Electrum listunspent response: ${JSON.stringify(unspentResp)}`,
+        );
+      }
+
+      const entries = unspentResp as unknown as ElectrumListUnspentEntry[];
+      const utxos: OnChainUtxo[] = entries
+        .filter((e) => !e.token_data)
+        .map((e) => ({
+          txid: e.tx_hash,
+          vout: e.tx_pos,
+          satoshis: BigInt(e.value),
+          height: e.height,
+          isUnconfirmed: e.height <= 0,
+        }));
+
+      let confirmedSatoshis = 0n;
+      let unconfirmedSatoshis = 0n;
+      for (const u of utxos) {
+        if (u.isUnconfirmed) {
+          unconfirmedSatoshis += u.satoshis;
+        } else {
+          confirmedSatoshis += u.satoshis;
+        }
+      }
+      const totalSatoshis = confirmedSatoshis + unconfirmedSatoshis;
+      const progress = computePotProgress(totalSatoshis, contract.potGoalSatoshis);
+
+      let history: OnChainHistoryTx[] = [];
+      let resolution: OnChainFinalResolution | null = null;
+
+      if (utxos.length === 0) {
+        try {
+          const histResp = await client.request(
+            "blockchain.scripthash.get_history",
+            contract.scriptHash,
+          );
+          if (Array.isArray(histResp) && histResp.length > 0) {
+            const rawHistory = histResp as unknown as ElectrumHistoryEntry[];
+            history = rawHistory.map((h) => ({
+              txid: h.tx_hash,
+              height: h.height,
+              isUnconfirmed: h.height <= 0,
+            }));
+
+            // Inspect up to the 5 most recent txs to identify the final spend tx.
+            const candidates = [...history].reverse().slice(0, 5);
+            for (const candidate of candidates) {
+              const rawTx = await client.request(
+                "blockchain.transaction.get",
+                candidate.txid,
+              );
+              if (typeof rawTx !== "string") continue;
+              const classified = classifyPotResolutionTx(contract, rawTx, candidate);
+              if (classified) {
+                resolution = classified;
+                break;
+              }
+            }
+          }
+        } catch {
+          // Graceful fallback: never block normal pot polling if history lookup fails.
+        }
+      }
+
+      return {
+        utxos,
+        totalSatoshis,
+        confirmedSatoshis,
+        unconfirmedSatoshis,
+        progress,
+        history,
+        resolution,
+        fetchedAt: Date.now(),
+      };
+    },
     customServers,
   );
-  let confirmedSatoshis = 0n;
-  let unconfirmedSatoshis = 0n;
-  for (const u of utxos) {
-    if (u.isUnconfirmed) {
-      unconfirmedSatoshis += u.satoshis;
-    } else {
-      confirmedSatoshis += u.satoshis;
-    }
-  }
-  const totalSatoshis = confirmedSatoshis + unconfirmedSatoshis;
-  const progress = computePotProgress(totalSatoshis, contract.potGoalSatoshis);
-
-  return {
-    utxos,
-    totalSatoshis,
-    confirmedSatoshis,
-    unconfirmedSatoshis,
-    progress,
-    fetchedAt: Date.now(),
-  };
 }
 
 class BroadcastRejectedError extends Error {

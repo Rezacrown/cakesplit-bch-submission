@@ -10,6 +10,7 @@ import {
   type PotProgress,
 } from "@/lib/bch";
 import {
+  buildReceiptFromOnChainResolution,
   executeCancelBillAction,
   executeSettleBillAction,
   fetchLiveBillPot,
@@ -36,7 +37,7 @@ export function useBillPotNetwork(activeBill: CompiledBillRoomState | null) {
   const token = activeBill?.token ?? "";
   const contract = activeBill?.contract ?? null;
   const bill = activeBill?.bill ?? null;
-  const broadcastReceipt = token ? (receiptByToken[token] ?? null) : null;
+  const localReceipt = token ? (receiptByToken[token] ?? null) : null;
 
   const organizerKey = useMemo(() => {
     if (!isClient || !bill) return null;
@@ -63,11 +64,29 @@ export function useBillPotNetwork(activeBill: CompiledBillRoomState | null) {
       return fetchLiveBillPot(contract);
     },
     enabled: Boolean(contract),
-    refetchInterval: broadcastReceipt ? false : 4_000,
+    refetchInterval: (query) => {
+      if (localReceipt || query.state.data?.resolution) return false;
+      return 4_000;
+    },
     retry: 1,
   });
 
   const potState = potQuery.data ?? null;
+  const onChainReceipt = useMemo(() => {
+    if (!contract || !potState?.resolution) return null;
+    return buildReceiptFromOnChainResolution(contract, potState, bill?.title);
+  }, [contract, potState, bill?.title]);
+
+  const broadcastReceipt = useMemo<BroadcastReceipt | null>(() => {
+    if (localReceipt && onChainReceipt?.historyEntries?.length) {
+      return {
+        ...localReceipt,
+        historyEntries: onChainReceipt.historyEntries,
+      };
+    }
+    return localReceipt ?? onChainReceipt;
+  }, [localReceipt, onChainReceipt]);
+
   const potProgress: PotProgress = useMemo(() => {
     if (potState) return potState.progress;
     if (activeBill) {

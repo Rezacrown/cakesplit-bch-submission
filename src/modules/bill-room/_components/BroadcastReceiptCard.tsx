@@ -94,6 +94,45 @@ export function BroadcastReceiptCard({
         </div>
       </div>
 
+      {receipt.historyEntries && receipt.historyEntries.length > 0 ? (
+        <div className="space-y-2 rounded-xl border border-[#E4E4E7] bg-[#FFFFFF] p-3.5 text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[10px] font-bold tracking-wider text-[#52525B] uppercase">
+              On-Chain Bill History
+            </span>
+            <span className="font-mono text-[10px] font-semibold text-[#71717A]">
+              {receipt.historyEntries.length}{" "}
+              {receipt.historyEntries.length === 1 ? "tx" : "txs"}
+            </span>
+          </div>
+          <div className="divide-y divide-[#F4F4F5]">
+            {receipt.historyEntries.map((entry, idx) => (
+              <div
+                key={entry.txid}
+                className="flex items-center justify-between gap-2 py-1.5 first:pt-0 last:pb-0"
+              >
+                <span className="font-semibold text-[#111111]">
+                  {entry.role === "settlement"
+                    ? "Cashier Settlement"
+                    : entry.role === "refund"
+                      ? "Table Refund"
+                      : `Slice Deposit #${idx + 1}`}
+                </span>
+                <a
+                  href={entry.explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-[#52525B] underline decoration-[#18181B]/25 underline-offset-2 hover:text-[#111111] hover:decoration-[#18181B]"
+                >
+                  <span>{truncateMiddle(entry.txid, 8, 6)}</span>
+                  <ArrowUpRight className="size-3" aria-hidden="true" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2">
         <a
           href={receipt.explorerUrl}

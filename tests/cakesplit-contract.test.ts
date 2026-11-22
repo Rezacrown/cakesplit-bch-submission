@@ -303,4 +303,49 @@ describe("CakeSplit XO Template & BCH 2026 VM Covenant", () => {
       verifyTransactionWithBchVm(builtCancel.transaction, builtCancel.sourceOutputs),
     ).toEqual({ ok: true });
   });
+
+  it("classifies on-chain pot history txs into settled, cancelled, or deposit", async () => {
+    const { classifyPotResolutionTx } = await import("@/lib/bch");
+
+    const builtChipIn = buildChipInTransaction({
+      contract,
+      potUtxo: { txid: TXID_A, vout: 0, satoshis: 1_500n },
+      contributorUtxo: { txid: TXID_FUND, vout: 0, satoshis: 10_000n },
+      contributorPrivateKey: hexToBin(friend.privateKeyHex),
+      contributionSatoshis: 2_500n,
+    });
+    expect(
+      classifyPotResolutionTx(contract, builtChipIn.rawTxHex, {
+        txid: builtChipIn.txid,
+        height: 900_000,
+        isUnconfirmed: false,
+      }),
+    ).toBeNull();
+
+    const builtSettle = buildSettleBillTransaction({
+      contract,
+      potUtxos: [{ txid: TXID_A, vout: 0, satoshis: 4_000n }],
+    });
+    const settled = classifyPotResolutionTx(contract, builtSettle.rawTxHex, {
+      txid: builtSettle.txid,
+      height: 900_001,
+      isUnconfirmed: false,
+    });
+    expect(settled?.kind).toBe("settled");
+    expect(settled?.outputSatoshis).toBe(3_500n);
+
+    const builtCancel = buildCancelBillTransaction({
+      contract,
+      potUtxos: [{ txid: TXID_A, vout: 0, satoshis: 2_500n }],
+      organizerPrivateKey: hexToBin(organizer.privateKeyHex),
+      refundAddress: organizer.address,
+    });
+    const cancelled = classifyPotResolutionTx(contract, builtCancel.rawTxHex, {
+      txid: builtCancel.txid,
+      height: 900_002,
+      isUnconfirmed: false,
+    });
+    expect(cancelled?.kind).toBe("cancelled");
+    expect(cancelled?.outputSatoshis).toBe(builtCancel.refundedSatoshis);
+  });
 });

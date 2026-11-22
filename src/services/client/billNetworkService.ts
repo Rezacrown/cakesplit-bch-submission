@@ -13,6 +13,14 @@ import {
   type OnChainUtxo,
 } from "@/lib/bch";
 import { createSignedCakeSplitInvitation } from "@/lib/xo";
+export { buildReceiptFromOnChainResolution } from "@/services/client/receiptResolution";
+
+export interface ReceiptHistoryEntry {
+  txid: string;
+  explorerUrl: string;
+  role: "deposit" | "settlement" | "refund";
+  isUnconfirmed: boolean;
+}
 
 export interface SettleBillBroadcastResult {
   kind: "settled";
@@ -23,6 +31,7 @@ export interface SettleBillBroadcastResult {
   sweptUtxoCount: number;
   invitationJson: string;
   broadcastedAt: number;
+  historyEntries?: ReceiptHistoryEntry[];
 }
 
 export interface CancelBillBroadcastResult {
@@ -34,6 +43,7 @@ export interface CancelBillBroadcastResult {
   feeSatoshis: bigint;
   invitationJson: string;
   broadcastedAt: number;
+  historyEntries?: ReceiptHistoryEntry[];
 }
 
 export type BroadcastReceipt =
@@ -41,7 +51,8 @@ export type BroadcastReceipt =
   | CancelBillBroadcastResult;
 
 /**
- * Fetches live Bill Pot UTXOs (confirmed + 0-conf mempool) via Fulcrum WSS.
+ * Fetches live Bill Pot UTXOs (confirmed + 0-conf mempool) and settled/cancelled
+ * on-chain history via Fulcrum WSS.
  */
 export async function fetchLiveBillPot(
   contract: CompiledCakeSplitContract,
