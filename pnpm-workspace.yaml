@@ -3,5 +3,6 @@ allowBuilds:
   unrs-resolver: false
   better-sqlite3: true
   canvas: false
+  esbuild: true
   is-hidden-file: false
   sqlite3: true
