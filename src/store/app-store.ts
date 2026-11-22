@@ -20,12 +20,12 @@ interface AppState {
 }
 
 const DEFAULT_PARTICIPANTS: SplitParticipantDraft[] = [
-  { id: "p-1", label: "Host", shareSatoshis: 1500 },
-  { id: "p-2", label: "Friend 1", shareSatoshis: 1500 },
+  { id: "p-1", label: "You", shareSatoshis: 0 },
+  { id: "p-2", label: "Friend 2", shareSatoshis: 0 },
 ];
 
 export const useAppStore = create<AppState>((set) => ({
-  network: "chipnet",
+  network: "mainnet",
   title: "",
   merchantAddress: "",
   participants: DEFAULT_PARTICIPANTS,
