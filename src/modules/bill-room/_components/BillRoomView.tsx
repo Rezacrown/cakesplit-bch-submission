@@ -43,7 +43,7 @@ export function BillRoomView() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.08fr_0.92fr]">
         <ParticipantSlicesCard
-          participants={room.activeBill.bill.participants}
+          participants={room.payableParticipants}
           priceUsd={room.priceUsd}
           onSelectParticipant={room.onSelectParticipant}
         />

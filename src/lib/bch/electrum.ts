@@ -7,6 +7,7 @@ import { scriptToScriptHash } from "@xo-cash/utils";
 import { cashAddressToLockingHex, type BchNetwork } from "@/lib/bch/address";
 import type { CompiledCakeSplitContract, UtxoRef } from "@/lib/bch/cakesplit-contract";
 import { computePotProgress, type PotProgress } from "@/lib/bch/bill-link";
+import { appConfig } from "@/lib/config/env";
 
 export interface ElectrumServerEndpoint {
   host: string;
@@ -15,12 +16,7 @@ export interface ElectrumServerEndpoint {
 }
 
 export const DEFAULT_ELECTRUM_SERVERS: Record<BchNetwork, ElectrumServerEndpoint[]> = {
-  mainnet: [
-    { host: "bch.imaginary.cash", port: 50004, scheme: "wss" },
-    { host: "electrum.imaginary.cash", port: 50004, scheme: "wss" },
-    { host: "cashnode.bch.ninja", port: 50004, scheme: "wss" },
-    { host: "fulcrum.greyh.at", port: 50004, scheme: "wss" },
-  ],
+  mainnet: appConfig.electrumMainnetServers,
   chipnet: [
     { host: "chipnet.bch.ninja", port: 50004, scheme: "wss" },
     { host: "chipnet.imaginary.cash", port: 50004, scheme: "wss" },
@@ -52,13 +48,13 @@ export interface ContractPotState {
 
 export function getExplorerTxUrl(txid: string, network: BchNetwork): string {
   return network === "mainnet"
-    ? `https://explorer.bch.ninja/tx/${txid}`
+    ? `${appConfig.explorerMainnetUrl}/tx/${txid}`
     : `https://chipnet.chaingraph.cash/tx/${txid}`;
 }
 
 export function getExplorerAddressUrl(address: string, network: BchNetwork): string {
   return network === "mainnet"
-    ? `https://explorer.bch.ninja/address/${address}`
+    ? `${appConfig.explorerMainnetUrl}/address/${address}`
     : `https://chipnet.chaingraph.cash/address/${address}`;
 }
 

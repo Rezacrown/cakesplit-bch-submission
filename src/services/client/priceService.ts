@@ -1,4 +1,6 @@
-export const FALLBACK_BCH_USD_PRICE = 200;
+import { appConfig } from "@/lib/config/env";
+
+export const FALLBACK_BCH_USD_PRICE = appConfig.fallbackBchUsdPrice;
 
 export type BchPriceSource = "coinbase" | "coingecko" | "fallback";
 

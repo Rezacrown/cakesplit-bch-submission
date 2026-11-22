@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { appConfig } from "@/lib/config/env";
 
-const GITHUB_REPO_URL = "https://github.com/Rezacrown/bch-blaze-hackathon";
-const XO_SITE_URL = "https://blaze.xo.cash";
+const GITHUB_REPO_URL = appConfig.githubRepoUrl;
+const XO_SITE_URL = appConfig.xoDebugToolUrl;
 
 export function SiteFooter() {
   return (

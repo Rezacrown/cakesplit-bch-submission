@@ -1,4 +1,5 @@
 import { ArrowUpRight, CheckCircle2, Copy, RotateCcw } from "lucide-react";
+import { appConfig } from "@/lib/config/env";
 import type { BroadcastReceipt } from "@/services/client/billNetworkService";
 import {
   formatBchAmount,
@@ -13,7 +14,7 @@ interface BroadcastReceiptCardProps {
   onCopyInvitationJson: () => void;
 }
 
-const BLAZE_XO_URL = "https://blaze.xo.cash/";
+const BLAZE_XO_URL = appConfig.xoDebugToolUrl;
 
 export function BroadcastReceiptCard({
   receipt,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildShareableBillUrl,
   calculateBillSummary,
+  computePayableSlices,
   computePotProgress,
   decodeShareableBill,
   encodeShareableBill,
@@ -60,7 +61,7 @@ describe("CakeSplit frontend utilities", () => {
     expect(full.canOrganizerCancel).toBe(false);
   });
 
-  it("round-trips serverless shareable bill URL payloads with Zod validation", () => {
+  it("round-trips compact v2 shareable bill URLs (< 180 chars) and stays compatible with legacy v1 JSON tokens", () => {
     const key = generateOrganizerKey("mainnet");
     const payload = {
       v: 1 as const,
@@ -78,12 +79,41 @@ describe("CakeSplit frontend utilities", () => {
     const token = encodeShareableBill(payload);
     expect(token).not.toContain("+");
     expect(token).not.toContain("/");
+    expect(token.length).toBeLessThan(180);
 
     const decoded = decodeShareableBill(token);
     expect(decoded).toEqual(payload);
 
+    // Verify legacy v1 base64url JSON tokens still decode cleanly
+    const legacyV1Token = Buffer.from(JSON.stringify(payload), "utf8")
+      .toString("base64url");
+    expect(decodeShareableBill(legacyV1Token)).toEqual(payload);
+
     const url = buildShareableBillUrl(payload, "https://cakesplit.app/");
     expect(url.startsWith("https://cakesplit.app/bill?d=")).toBe(true);
+  });
+
+  it("distributes settlement fee across participant Pay Slices so slices sum to 100% of potGoalSatoshis", () => {
+    const twoPeople = computePayableSlices(
+      [
+        { id: "p-1", label: "You", shareSatoshis: 2_561 },
+        { id: "p-2", label: "Friend 2", shareSatoshis: 2_561 },
+      ],
+      500,
+    );
+    expect(twoPeople.map((p) => p.payableSatoshis)).toEqual([2_811, 2_811]);
+    expect(twoPeople.reduce((sum, p) => sum + p.payableSatoshis, 0)).toBe(5_622);
+
+    const threePeople = computePayableSlices(
+      [
+        { id: "p-1", label: "A", shareSatoshis: 1_000 },
+        { id: "p-2", label: "B", shareSatoshis: 1_000 },
+        { id: "p-3", label: "C", shareSatoshis: 1_000 },
+      ],
+      500,
+    );
+    expect(threePeople.map((p) => p.feeShareSatoshis)).toEqual([167, 167, 166]);
+    expect(threePeople.reduce((sum, p) => sum + p.payableSatoshis, 0)).toBe(3_500);
   });
 
   it("exports and re-imports organizer WIF keys cleanly on mainnet & chipnet", () => {

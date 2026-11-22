@@ -5,6 +5,7 @@ import {
   Plus_Jakarta_Sans,
 } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { appConfig } from "@/lib/config/env";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -26,7 +27,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CakeSplit — Split the Table, Pay in One Tap",
+  metadataBase: new URL(appConfig.appUrl),
+  title: `${appConfig.appName} — Split the Table, Pay in One Tap`,
   description:
     "Split group bills on Bitcoin Cash. Everyone pays their slice into one shared pot, and anyone at the table settles straight to the cashier.",
 };

@@ -7,7 +7,8 @@ export interface QrRenderOptions {
 }
 
 /**
- * Generates a PNG Data URL QR code for a BIP21 BCH payment URI (scannable by Cashonize, Paytaca, Selene).
+ * Generates a high-contrast PNG Data URL QR code for a BIP21 BCH payment URI
+ * (scannable inside Cashonize, Paytaca, and Selene wallets).
  */
 export async function generatePaymentQrDataUrl(params: {
   address: string;
@@ -24,8 +25,8 @@ export async function generatePaymentQrDataUrl(params: {
   });
 
   const dataUrl = await QRCode.toDataURL(uri, {
-    width: params.options?.width ?? 280,
-    margin: params.options?.margin ?? 2,
+    width: params.options?.width ?? 320,
+    margin: params.options?.margin ?? 3,
     errorCorrectionLevel: "M",
   });
 
@@ -33,15 +34,16 @@ export async function generatePaymentQrDataUrl(params: {
 }
 
 /**
- * Generates a PNG Data URL QR code for any shareable URL (e.g., `/bill?d=...`).
+ * Generates a spacious, low-density PNG Data URL QR code for shareable `/bill?d=...` URLs
+ * (`errorCorrectionLevel: "L"` + wider quiet zone) so phone cameras scan immediately.
  */
 export async function generateUrlQrDataUrl(
   url: string,
   options?: QrRenderOptions,
 ): Promise<string> {
   return QRCode.toDataURL(url, {
-    width: options?.width ?? 260,
-    margin: options?.margin ?? 2,
-    errorCorrectionLevel: "M",
+    width: options?.width ?? 360,
+    margin: options?.margin ?? 3,
+    errorCorrectionLevel: "L",
   });
 }

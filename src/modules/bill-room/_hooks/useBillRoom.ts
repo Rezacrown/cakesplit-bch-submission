@@ -6,17 +6,19 @@ import { toast } from "sonner";
 import { useBchPrice } from "@/hooks/useBchPrice";
 import {
   buildShareableBillUrl,
+  computePayableSlices,
   generatePaymentQrDataUrl,
   generateUrlQrDataUrl,
-  type ShareableBillPayload,
+  type PayableParticipantSlice,
 } from "@/lib/bch";
+import { getShareableAppOrigin } from "@/lib/config/env";
 import {
   extractBillToken,
   parseAndCompileBillToken,
 } from "../_utils/billRoomHelpers";
 import { useBillPotNetwork } from "./useBillPotNetwork";
 
-export type BillParticipant = ShareableBillPayload["participants"][number];
+export type BillParticipant = PayableParticipantSlice;
 
 export interface ActivePaymentQr {
   participant: BillParticipant;
@@ -50,14 +52,20 @@ export function useBillRoom() {
   const invalidTokenError =
     parsedResult && !parsedResult.ok ? parsedResult.error : null;
 
+  const payableParticipants = useMemo<BillParticipant[]>(() => {
+    if (!activeBill) return [];
+    return computePayableSlices(
+      activeBill.bill.participants,
+      activeBill.bill.settlementFeeSatoshis,
+    );
+  }, [activeBill]);
+
   const { priceUsd, isLive: isPriceLive } = useBchPrice();
   const potNetwork = useBillPotNetwork(activeBill);
 
   const getShareUrl = (): string => {
     if (!activeBill) return "";
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    return buildShareableBillUrl(activeBill.bill, origin);
+    return buildShareableBillUrl(activeBill.bill, getShareableAppOrigin());
   };
 
   const copyText = async (text: string, successLabel: string) => {
@@ -93,7 +101,7 @@ export function useBillRoom() {
     setShareQrOpen(true);
     setShareQrDataUrl(null);
     const shareUrl = getShareUrl();
-    void generateUrlQrDataUrl(shareUrl, { width: 260, margin: 2 })
+    void generateUrlQrDataUrl(shareUrl, { width: 360, margin: 3 })
       .then((url) => setShareQrDataUrl(url))
       .catch(() => toast.error("Could not generate share QR code."));
   };
@@ -109,10 +117,10 @@ export function useBillRoom() {
 
     void generatePaymentQrDataUrl({
       address: activeBill.contract.contractAddress,
-      satoshis: participant.shareSatoshis,
+      satoshis: participant.payableSatoshis,
       label: participant.label,
       message: activeBill.bill.title,
-      options: { width: 280, margin: 2 },
+      options: { width: 320, margin: 3 },
     })
       .then(({ uri, dataUrl }) => {
         if (qrRequestIdRef.current === requestId) {
@@ -149,6 +157,7 @@ export function useBillRoom() {
 
   return {
     activeBill,
+    payableParticipants,
     invalidTokenError,
     priceUsd,
     isPriceLive,

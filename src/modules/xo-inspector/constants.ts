@@ -1,7 +1,8 @@
 import type { BchNetwork } from "@/lib/bch/address";
+import { appConfig } from "@/lib/config/env";
 import type { CakeSplitActionId, CakeSplitRoleId } from "@/lib/xo";
 
-export const XO_DEBUG_URL = "https://blaze.xo.cash/";
+export const XO_DEBUG_URL = appConfig.xoDebugToolUrl;
 
 export const CANONICAL_NONCE_HEX = "cafebabe01020304";
 export const CANONICAL_PAYOUT_SATS = 10_000n;

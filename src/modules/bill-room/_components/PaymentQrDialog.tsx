@@ -51,13 +51,17 @@ export function PaymentQrDialog({
         <DialogHeader className="space-y-1.5 text-left">
           <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[#18181B]/20 bg-[#F4F4F5] px-3 py-0.5 font-mono text-[11px] font-bold text-[#111111] uppercase">
             <QrCode className="size-3" aria-hidden="true" />
-            <span>BIP21 Payment QR</span>
+            <span>BIP21 Wallet Payment QR</span>
           </div>
           <DialogTitle className="font-display text-xl font-extrabold text-[#111111]">
             {participant ? `Pay ${participant.label}'s Slice` : "Pay Slice"}
           </DialogTitle>
           <DialogDescription className="text-xs leading-relaxed text-[#52525B]">
-            Scan with any Bitcoin Cash wallet to chip into{" "}
+            Open your Bitcoin Cash wallet app and scan inside{" "}
+            <strong className="font-semibold text-[#111111]">
+              Send &rarr; Scan QR
+            </strong>{" "}
+            to chip into{" "}
             <strong className="font-semibold text-[#111111]">{billTitle}</strong>
             .
           </DialogDescription>
@@ -75,21 +79,27 @@ export function PaymentQrDialog({
                   <img
                     src={paymentQr.dataUrl}
                     alt={`Bitcoin Cash BIP21 QR code for ${participant.label}`}
-                    width={220}
-                    height={220}
-                    className="size-52 object-contain"
+                    width={240}
+                    height={240}
+                    className="size-56 object-contain"
                   />
                 </div>
               )}
 
               <div className="text-center">
                 <p className="font-mono text-lg font-extrabold text-[#111111]">
-                  {formatBchAmount(participant.shareSatoshis)} BCH
+                  {formatBchAmount(participant.payableSatoshis)} BCH
                 </p>
-                <p className="font-mono text-xs text-[#71717A]">
-                  {formatSatsCount(participant.shareSatoshis)} sats (
-                  {formatUsdApprox(participant.shareSatoshis, priceUsd)})
+                <p className="font-mono text-xs text-[#52525B]">
+                  {formatSatsCount(participant.payableSatoshis)} sats (
+                  {formatUsdApprox(participant.payableSatoshis, priceUsd)})
                 </p>
+                {participant.feeShareSatoshis > 0 ? (
+                  <p className="mt-0.5 font-mono text-[10px] text-[#71717A]">
+                    Includes {formatSatsCount(participant.feeShareSatoshis)} sats
+                    share of settlement fee
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -134,10 +144,12 @@ export function PaymentQrDialog({
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 pt-1 text-[11px] font-medium text-[#71717A]">
-              <Smartphone className="size-3.5 shrink-0" aria-hidden="true" />
+            <div className="flex items-start gap-2 rounded-xl border border-[#E4E4E7] bg-[#FAF9F6] px-3 py-2 text-[11px] leading-relaxed text-[#52525B]">
+              <Smartphone className="mt-0.5 size-3.5 shrink-0 text-[#111111]" aria-hidden="true" />
               <span>
-                Compatible with {COMPATIBLE_WALLETS.join(", ")}
+                Works with {COMPATIBLE_WALLETS.join(", ")}. Standard phone cameras
+                read this as a payment address rather than a webpage; on browser
+                wallets, copy the pot address above.
               </span>
             </div>
           </div>

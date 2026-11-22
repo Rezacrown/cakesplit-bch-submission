@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Code2, Copy, Presentation, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import { appConfig, truncateCashAddress } from "@/lib/config/env";
 
-const EMBER_ADDRESS = "bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe";
-const EMBER_DISPLAY = "bitcoincash:zr4jg9...g5aqe";
-const GITHUB_REPO_URL = "https://github.com/Rezacrown/bch-blaze-hackathon";
+const EMBER_ADDRESS = appConfig.emberAddress;
+const EMBER_DISPLAY = truncateCashAddress(EMBER_ADDRESS);
+const GITHUB_REPO_URL = appConfig.githubRepoUrl;
+const SLIDES_URL = appConfig.slidesUrl;
 
 export function BlazeTopBanner() {
   const [copied, setCopied] = useState(false);
@@ -36,14 +39,27 @@ export function BlazeTopBanner() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3.5">
-          <a
-            href="#reel"
-            title="CakeSplit Story Reel"
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[#D4D4D8] transition-colors hover:text-[#FAF9F6]"
-          >
-            <Presentation className="size-3.5" aria-hidden="true" />
-            <span>Story Reel</span>
-          </a>
+          {SLIDES_URL ? (
+            <a
+              href={SLIDES_URL}
+              target="_blank"
+              rel="noreferrer"
+              title="Widget Factory Presentation Slides"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[#D4D4D8] transition-colors hover:text-[#FAF9F6]"
+            >
+              <Presentation className="size-3.5" aria-hidden="true" />
+              <span>Slides</span>
+            </a>
+          ) : (
+            <Link
+              href="/#reel"
+              title="CakeSplit Story Reel"
+              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[#D4D4D8] transition-colors hover:text-[#FAF9F6]"
+            >
+              <Presentation className="size-3.5" aria-hidden="true" />
+              <span>Story Reel</span>
+            </Link>
+          )}
 
           <a
             href={GITHUB_REPO_URL}

@@ -49,13 +49,19 @@ export function ParticipantSlicesCard({
                 <p className="truncate font-display text-sm font-bold text-[#111111]">
                   {person.label}
                 </p>
-                <p className="font-mono text-xs font-semibold text-[#52525B]">
-                  {formatBchAmount(person.shareSatoshis)} BCH{" "}
-                  <span className="font-normal text-[#71717A]">
-                    ({formatSatsCount(person.shareSatoshis)} sats /{" "}
-                    {formatUsdApprox(person.shareSatoshis, priceUsd)})
+                <p className="font-mono text-xs font-semibold text-[#111111]">
+                  {formatBchAmount(person.payableSatoshis)} BCH{" "}
+                  <span className="font-normal text-[#52525B]">
+                    ({formatSatsCount(person.payableSatoshis)} sats /{" "}
+                    {formatUsdApprox(person.payableSatoshis, priceUsd)})
                   </span>
                 </p>
+                {person.feeShareSatoshis > 0 ? (
+                  <p className="font-mono text-[10px] text-[#71717A]">
+                    {formatSatsCount(person.subtotalSatoshis)} sats bill +{" "}
+                    {formatSatsCount(person.feeShareSatoshis)} sats network fee
+                  </p>
+                ) : null}
               </div>
             </div>
 

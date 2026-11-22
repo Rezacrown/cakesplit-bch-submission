@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { MIN_COVENANT_DUST_SATS, type BchNetwork } from "@/lib/bch/address";
+import {
+  decodeRawBillToken,
+  encodeCompactBillToken,
+} from "@/lib/bch/bill-link-codec";
 import { CAKESPLIT_SETTLEMENT_FEE_SATS } from "@/lib/xo/cakesplit-template";
 import { bchNetworkSchema, participantShareSchema } from "@/lib/schemas/bill";
 
@@ -138,37 +142,51 @@ export function computePotProgress(
   };
 }
 
-function toBase64Url(utf8: string): string {
-  const bytes = new TextEncoder().encode(utf8);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-  const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
+export interface PayableParticipantSlice extends SplitParticipantInput {
+  subtotalSatoshis: number;
+  feeShareSatoshis: number;
+  payableSatoshis: number;
 }
 
 /**
- * Encodes a CakeSplit bill into a compact URL-safe token (serverless sharing, zero DB).
+ * Distributes the fixed network settlement fee buffer across all participants so that
+ * summing every participant's `Pay Slice` QR equals 100% of `potGoalSatoshis`.
+ */
+export function computePayableSlices(
+  participants: SplitParticipantInput[],
+  settlementFeeSatoshis: number | bigint,
+): PayableParticipantSlice[] {
+  const count = participants.length;
+  if (count === 0) return [];
+  const totalFee = Math.max(0, Number(settlementFeeSatoshis));
+  const baseFee = Math.floor(totalFee / count);
+  const remainder = totalFee - baseFee * count;
+
+  return participants.map((participant, idx) => {
+    const subtotalSatoshis = Math.trunc(participant.shareSatoshis);
+    const feeShareSatoshis = baseFee + (idx < remainder ? 1 : 0);
+    return {
+      ...participant,
+      subtotalSatoshis,
+      feeShareSatoshis,
+      payableSatoshis: subtotalSatoshis + feeShareSatoshis,
+    };
+  });
+}
+
+/**
+ * Encodes a CakeSplit bill into a compact v2 URL-safe binary token (serverless, ~3x shorter for QR).
  */
 export function encodeShareableBill(payload: ShareableBillPayload): string {
   const validated = shareableBillSchema.parse(payload);
-  return toBase64Url(JSON.stringify(validated));
+  return encodeCompactBillToken(validated);
 }
 
 /**
- * Decodes and Zod-validates a shareable CakeSplit bill token from URL query/hash.
+ * Decodes and Zod-validates either a compact v2 binary token or a legacy v1 JSON token.
  */
 export function decodeShareableBill(encoded: string): ShareableBillPayload {
-  const jsonText = fromBase64Url(encoded.trim());
-  const parsed: unknown = JSON.parse(jsonText);
+  const parsed = decodeRawBillToken(encoded);
   return shareableBillSchema.parse(parsed);
 }
 
