@@ -44,6 +44,7 @@ export function BillRoomView() {
       <div className="grid items-start gap-6 lg:grid-cols-[1.08fr_0.92fr]">
         <ParticipantSlicesCard
           participants={room.payableParticipants}
+          paidParticipantIds={room.paidParticipantIds}
           priceUsd={room.priceUsd}
           onSelectParticipant={room.onSelectParticipant}
         />

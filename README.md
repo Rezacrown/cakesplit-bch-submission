@@ -16,14 +16,14 @@ Trustless, non-custodial group bill splitting built natively on **Bitcoin Cash M
     <img src="https://img.shields.io/badge/Build_with_XO-113--Byte_P2SH32-18181B?style=for-the-badge" alt="Build with XO" />
   </a>
   <img src="https://img.shields.io/badge/Network-BCH_Mainnet-0AC18E?style=for-the-badge" alt="Bitcoin Cash Mainnet" />
-  <img src="https://img.shields.io/badge/Tests-34%2F34_Passing-2563EB?style=for-the-badge" alt="34/34 Tests Passing" />
+  <img src="https://img.shields.io/badge/Tests-37%2F37_Passing-2563EB?style=for-the-badge" alt="37/37 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=for-the-badge" alt="MIT License" />
 </p>
 
 <p>
   <a href="https://cakesplit-bch.vercel.app"><strong>Open Live App</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://cakesplit-bch.vercel.app/create"><strong>Create a Table Check</strong></a>
+  <a href="https://docs.google.com/presentation/d/1MWgxqhW43VwhE9tCDykVvCvQUX3ljzvHgSwMqDwQqhs/edit?usp=sharing"><strong>Widget Factory Slides</strong></a>
   &nbsp;&middot;&nbsp;
   <a href="https://cakesplit-bch.vercel.app/xo"><strong>XO Contract Inspector</strong></a>
   &nbsp;&middot;&nbsp;
@@ -65,10 +65,27 @@ When friends eat out or share a group bill, someone always has to front the enti
 ## BCH BLAZE 2026 Submission Overview
 
 - **Live Mainnet Web App:** https://cakesplit-bch.vercel.app
+- **Widget Factory Google Slides:** https://docs.google.com/presentation/d/1MWgxqhW43VwhE9tCDykVvCvQUX3ljzvHgSwMqDwQqhs/edit?usp=sharing
 - **Public Repository:** https://github.com/Rezacrown/cakesplit-bch-submission
 - **XO Template ID:** `c52aac6dcb3a27a8d2f915f1c20fbf806548041e2ea88f6abc6fcca9cd8f4755`
 - **EMBER2026 CashTokens Address:** `bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe`
 - **Tracks & Bounty:** Build with XO (General Protocols), Mainnet Track, Media Track, Community Choice (`EMBER2026`)
+
+---
+
+## Verified BCH Mainnet Execution Proof
+
+CakeSplit has executed a real, end-to-end multi-participant split bill and permissionless 0-signature P2SH32 covenant settlement live on **Bitcoin Cash Mainnet**:
+
+| Lifecycle Step | Amount | Mainnet Transaction ID | Explorer |
+| :--- | :--- | :--- | :--- |
+| **1. Pay Slice #1** (Cashonize → P2SH32 Bill Pot) | `5,250 sats` | `d84e42f5c4005432216b5164b15c5b4c9d1aab3727b3589cf799b3f7fe7ef4e3` | [bch.ninja](https://explorer.bch.ninja/tx/d84e42f5c4005432216b5164b15c5b4c9d1aab3727b3589cf799b3f7fe7ef4e3) · [Blockchair](https://blockchair.com/bitcoin-cash/transaction/d84e42f5c4005432216b5164b15c5b4c9d1aab3727b3589cf799b3f7fe7ef4e3) |
+| **2. Pay Slice #2** (Cashonize → P2SH32 Bill Pot) | `5,250 sats` | `e19026a0dd42b11e5e8e070bf09df8c13ce3544f110afd6a8c226fe2b8c8f1b8` | [bch.ninja](https://explorer.bch.ninja/tx/e19026a0dd42b11e5e8e070bf09df8c13ce3544f110afd6a8c226fe2b8c8f1b8) · [Blockchair](https://blockchair.com/bitcoin-cash/transaction/e19026a0dd42b11e5e8e070bf09df8c13ce3544f110afd6a8c226fe2b8c8f1b8) |
+| **3. `settleBill`** (Permissionless 0-sig sweep → Cashier) | `10,000 sats` net (`500 sats` fee) | **`8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff`** | [bch.ninja](https://explorer.bch.ninja/tx/8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff) · [Selene](https://explorer.selene.cash/tx/8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff?network=mainnet) |
+
+<p align="center">
+  <img src="./docs/mainnet/mainnet-settle-receipt.png" alt="CakeSplit live BCH Mainnet settled receipt" width="760" />
+</p>
 
 ---
 

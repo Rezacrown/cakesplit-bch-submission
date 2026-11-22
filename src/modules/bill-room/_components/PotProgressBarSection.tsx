@@ -31,6 +31,11 @@ export function PotProgressBarSection({
     : Math.max(0, Math.min(100, potProgress.percent));
   const syncLabel = formatSyncTimestamp(lastSyncedAt);
 
+  const displayedCollected = isSettled
+    ? potProgress.potGoalSatoshis
+    : potProgress.collectedSatoshis;
+  const displayedRemaining = isSettled ? 0n : potProgress.remainingSatoshis;
+
   return (
     <div className="space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -56,7 +61,7 @@ export function PotProgressBarSection({
 
         <div className="flex items-baseline gap-2 font-mono text-xs sm:text-sm">
           <span className="font-extrabold text-[#111111]">
-            {formatSatsCount(potProgress.collectedSatoshis)} /{" "}
+            {formatSatsCount(displayedCollected)} /{" "}
             {formatSatsCount(potProgress.potGoalSatoshis)} sats
           </span>
           <span className="text-[#A1A1AA]">/</span>
@@ -84,12 +89,13 @@ export function PotProgressBarSection({
 
       <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-[#71717A]">
         <span>
-          Collected: {formatBchAmount(potProgress.collectedSatoshis)} BCH (
-          {formatUsdApprox(potProgress.collectedSatoshis, priceUsd)})
+          {isSettled ? "Settled" : "Collected"}:{" "}
+          {formatBchAmount(displayedCollected)} BCH (
+          {formatUsdApprox(displayedCollected, priceUsd)})
         </span>
         <span>
-          Remaining: {formatBchAmount(potProgress.remainingSatoshis)} BCH (
-          {formatUsdApprox(potProgress.remainingSatoshis, priceUsd)})
+          Remaining: {formatBchAmount(displayedRemaining)} BCH (
+          {formatUsdApprox(displayedRemaining, priceUsd)})
         </span>
       </div>
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/bch";
 import { getShareableAppOrigin } from "@/lib/config/env";
 import {
+  computePaidParticipantIds,
   extractBillToken,
   parseAndCompileBillToken,
 } from "../_utils/billRoomHelpers";
@@ -63,6 +64,25 @@ export function useBillRoom() {
   const { priceUsd, isLive: isPriceLive } = useBchPrice();
   const potNetwork = useBillPotNetwork(activeBill);
 
+  const paidParticipantIds = useMemo(() => {
+    const utxoAmounts = (potNetwork.potState?.utxos ?? []).map(
+      (u) => u.satoshis,
+    );
+    const isPotFullOrSettled =
+      potNetwork.broadcastReceipt?.kind === "settled" ||
+      potNetwork.potProgress.isReadyToSettle;
+    return computePaidParticipantIds({
+      participants: payableParticipants,
+      utxoAmounts,
+      isPotFullOrSettled,
+    });
+  }, [
+    payableParticipants,
+    potNetwork.potState?.utxos,
+    potNetwork.broadcastReceipt?.kind,
+    potNetwork.potProgress.isReadyToSettle,
+  ]);
+
   const getShareUrl = (): string => {
     if (!activeBill) return "";
     return buildShareableBillUrl(activeBill.bill, getShareableAppOrigin());
@@ -107,7 +127,7 @@ export function useBillRoom() {
   };
 
   const handleSelectParticipant = (participant: BillParticipant) => {
-    if (!activeBill) return;
+    if (!activeBill || paidParticipantIds.has(participant.id)) return;
     const requestId = qrRequestIdRef.current + 1;
     qrRequestIdRef.current = requestId;
 
@@ -158,6 +178,7 @@ export function useBillRoom() {
   return {
     activeBill,
     payableParticipants,
+    paidParticipantIds,
     invalidTokenError,
     priceUsd,
     isPriceLive,

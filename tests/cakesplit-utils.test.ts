@@ -148,4 +148,49 @@ describe("CakeSplit frontend utilities", () => {
       "explorer.bch.ninja/address/",
     );
   });
+
+  it("matches live incoming UTXOs to paid participant slices accurately", async () => {
+    const { computePaidParticipantIds } = await import(
+      "@/modules/bill-room/_utils/billRoomHelpers"
+    );
+
+    const equalParticipants = [
+      { id: "p-1", payableSatoshis: 5_250 },
+      { id: "p-2", payableSatoshis: 5_250 },
+    ];
+    const onePaid = computePaidParticipantIds({
+      participants: equalParticipants,
+      utxoAmounts: [5_250n],
+      isPotFullOrSettled: false,
+    });
+    expect([...onePaid]).toEqual(["p-1"]);
+
+    const customParticipants = [
+      { id: "p-1", payableSatoshis: 7_000 },
+      { id: "p-2", payableSatoshis: 3_500 },
+    ];
+    const secondCustomPaid = computePaidParticipantIds({
+      participants: customParticipants,
+      utxoAmounts: [3_500n],
+      isPotFullOrSettled: false,
+    });
+    expect([...secondCustomPaid]).toEqual(["p-2"]);
+  });
+
+  it("marks every participant slice paid once the pot is full or settled", async () => {
+    const { computePaidParticipantIds } = await import(
+      "@/modules/bill-room/_utils/billRoomHelpers"
+    );
+
+    const participants = [
+      { id: "p-1", payableSatoshis: 5_250 },
+      { id: "p-2", payableSatoshis: 5_250 },
+    ];
+    const allPaid = computePaidParticipantIds({
+      participants,
+      utxoAmounts: [],
+      isPotFullOrSettled: true,
+    });
+    expect([...allPaid]).toEqual(["p-1", "p-2"]);
+  });
 });

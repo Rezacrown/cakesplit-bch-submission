@@ -143,3 +143,48 @@ export function formatSyncTimestamp(timestampMs: number | null): string {
     second: "2-digit",
   });
 }
+
+/**
+ * Deterministically maps live on-chain pot UTXOs to participant slices so paid seats
+ * can be marked Paid/disabled automatically with zero backend state.
+ */
+export function computePaidParticipantIds(params: {
+  participants: ReadonlyArray<{ id: string; payableSatoshis: number }>;
+  utxoAmounts: readonly bigint[];
+  isPotFullOrSettled: boolean;
+}): Set<string> {
+  const { participants, utxoAmounts, isPotFullOrSettled } = params;
+  if (isPotFullOrSettled) {
+    return new Set(participants.map((p) => p.id));
+  }
+
+  const paidIds = new Set<string>();
+  let unmatchedPool = 0;
+
+  // Pass 1: exact satoshi match (works cleanly for both Equal Split and Custom Slices).
+  for (const rawAmount of utxoAmounts) {
+    const amount = Number(rawAmount);
+    if (amount <= 0) continue;
+    const match = participants.find(
+      (p) => !paidIds.has(p.id) && p.payableSatoshis === amount,
+    );
+    if (match) {
+      paidIds.add(match.id);
+    } else {
+      unmatchedPool += amount;
+    }
+  }
+
+  // Pass 2: allocate any combined or non-exact deposit amounts sequentially.
+  if (unmatchedPool > 0) {
+    for (const p of participants) {
+      if (paidIds.has(p.id) || p.payableSatoshis <= 0) continue;
+      if (unmatchedPool >= p.payableSatoshis) {
+        paidIds.add(p.id);
+        unmatchedPool -= p.payableSatoshis;
+      }
+    }
+  }
+
+  return paidIds;
+}
