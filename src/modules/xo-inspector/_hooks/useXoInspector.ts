@@ -5,11 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { loadOrCreateOrganizerKey } from "@/lib/bch";
 import type { CakeSplitActionId } from "@/lib/xo";
-import { useAppStore } from "@/store/app-store";
 import {
   buildXoInspectorSnapshot,
   type XoInspectorSnapshot,
 } from "../_utils/xoInspectorHelpers";
+
+const DEFAULT_NETWORK = "mainnet" as const;
 
 const subscribeClient = () => () => {};
 
@@ -37,20 +38,19 @@ export function useXoInspector() {
   const isClient = useIsClient();
   const searchParams = useSearchParams();
   const billToken = searchParams.get("d")?.trim() || null;
-  const network = useAppStore((s) => s.network);
 
   const [activeAction, setActiveAction] =
     useState<CakeSplitActionId>("openBill");
 
   const snapshot: XoInspectorSnapshot | null = useMemo(() => {
     if (!isClient) return null;
-    const organizerKey = loadOrCreateOrganizerKey(network);
+    const organizerKey = loadOrCreateOrganizerKey(DEFAULT_NETWORK);
     return buildXoInspectorSnapshot({
       billToken,
-      network,
+      network: DEFAULT_NETWORK,
       organizerKey,
     });
-  }, [isClient, billToken, network]);
+  }, [isClient, billToken]);
 
   const copyText = async (text: string, label: string) => {
     try {

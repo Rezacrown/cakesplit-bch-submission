@@ -19,6 +19,7 @@ interface PaymentQrDialogProps {
   open: boolean;
   billTitle: string;
   contractAddress: string;
+  priceUsd: number;
   participant: BillParticipant | null;
   paymentQr: ActivePaymentQr | null;
   isGenerating: boolean;
@@ -31,6 +32,7 @@ export function PaymentQrDialog({
   open,
   billTitle,
   contractAddress,
+  priceUsd,
   participant,
   paymentQr,
   isGenerating,
@@ -86,7 +88,7 @@ export function PaymentQrDialog({
                 </p>
                 <p className="font-mono text-xs text-[#71717A]">
                   {formatSatsCount(participant.shareSatoshis)} sats (
-                  {formatUsdApprox(participant.shareSatoshis)})
+                  {formatUsdApprox(participant.shareSatoshis, priceUsd)})
                 </p>
               </div>
             </div>

@@ -1,15 +1,9 @@
-import {
-  isValidCashAddress,
-  satsToBch,
-  type BchNetwork,
-} from "@/lib/bch/address";
-import type { ShareableBillPayload } from "@/lib/bch/bill-link";
-import { createSplitBillSchema } from "@/lib/schemas/bill";
+import { satsToBch } from "@/lib/bch/address";
+import { FALLBACK_BCH_USD_PRICE } from "@/services/client/priceService";
 import type { SplitParticipantDraft } from "@/store/app-store";
 import {
   SETTLEMENT_FEE_SATS,
-  USD_PER_BCH_REF,
-  type SplitMode,
+  type InputCurrencyUnit,
 } from "../constants";
 
 const SATS_PER_BCH_NUMBER = 100_000_000;
@@ -20,24 +14,6 @@ export interface BillSummaryMetrics {
   sharedPotTargetSats: number;
   hasAmount: boolean;
   participantCount: number;
-}
-
-export interface CreateBillFieldErrors {
-  title?: string;
-  merchantAddress?: string;
-  amount?: string;
-  participants?: Record<string, string>;
-}
-
-export interface ValidatedBillSnapshot {
-  network: BchNetwork;
-  title: string;
-  merchantAddress: string;
-  splitMode: SplitMode;
-  participants: SplitParticipantDraft[];
-  billTotalSats: number;
-  networkFeeSats: number;
-  sharedPotTargetSats: number;
 }
 
 /**
@@ -60,6 +36,86 @@ export function parseBchInputToSats(raw: string): number {
 }
 
 /**
+ * Converts a USD text input (e.g. "40.00" or "0.02") into exact integer satoshis
+ * using the active BCH/USD exchange rate.
+ */
+export function parseUsdToSatoshis(
+  usdInput: string,
+  bchUsdPrice: number,
+): number {
+  const cleaned = usdInput.trim().replace(/,/g, "");
+  if (
+    !cleaned ||
+    !/^\d*(\.\d*)?$/.test(cleaned) ||
+    !Number.isFinite(bchUsdPrice) ||
+    bchUsdPrice <= 0
+  ) {
+    return 0;
+  }
+  const usd = Number(cleaned);
+  if (!Number.isFinite(usd) || usd <= 0) {
+    return 0;
+  }
+  const sats = Math.round((usd / bchUsdPrice) * SATS_PER_BCH_NUMBER);
+  if (!Number.isSafeInteger(sats) || sats <= 0) {
+    return 0;
+  }
+  return sats;
+}
+
+/**
+ * Converts integer satoshis back into an editable USD input string without losing
+ * sub-cent precision on micro Mainnet amounts (e.g. 0.008).
+ */
+export function satoshisToUsdInput(
+  satoshis: number,
+  bchUsdPrice: number,
+): string {
+  if (
+    satoshis <= 0 ||
+    !Number.isFinite(bchUsdPrice) ||
+    bchUsdPrice <= 0
+  ) {
+    return "";
+  }
+  const usd = (Math.trunc(satoshis) / SATS_PER_BCH_NUMBER) * bchUsdPrice;
+  if (usd >= 1) {
+    return usd.toFixed(2);
+  }
+  if (usd >= 0.01) {
+    const roundedCents = Math.round(usd * 100) / 100;
+    if (Math.abs(usd - roundedCents) < 0.0001) {
+      return usd.toFixed(2);
+    }
+  }
+  const micro = usd.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  return micro === "0" ? "" : micro;
+}
+
+/**
+ * Formats satoshis as a crisp USD label: standard 2 decimals for >= $0.01,
+ * up to 4 decimals for micro amounts (e.g. $0.008), and `< $0.01` for sub-0.0001 dust.
+ */
+export function formatUsdFromSatoshis(
+  satoshis: number | bigint,
+  bchUsdPrice = FALLBACK_BCH_USD_PRICE,
+): string {
+  const sats =
+    typeof satoshis === "bigint" ? Number(satoshis) : Math.trunc(satoshis);
+  if (sats <= 0 || !Number.isFinite(bchUsdPrice) || bchUsdPrice <= 0) {
+    return "$0.00";
+  }
+  const usd = (sats / SATS_PER_BCH_NUMBER) * bchUsdPrice;
+  if (usd >= 0.01) {
+    return `$${usd.toFixed(2)}`;
+  }
+  if (usd >= 0.0001) {
+    return `$${usd.toFixed(4).replace(/0+$/, "")}`;
+  }
+  return "< $0.01";
+}
+
+/**
  * Formats integer satoshis into a clean BCH decimal string without trailing zeros.
  */
 export function formatSatsAsBch(sats: number): string {
@@ -67,17 +123,25 @@ export function formatSatsAsBch(sats: number): string {
   return satsToBch(Math.trunc(sats));
 }
 
-/**
- * Formats integer satoshis into an approximate USD string using the reference rate.
- */
-export function formatSatsAsUsdApprox(
-  sats: number,
-  usdPerBch = USD_PER_BCH_REF,
+export function parseUnitInputToSatoshis(
+  raw: string,
+  unit: InputCurrencyUnit,
+  bchUsdPrice: number,
+): number {
+  return unit === "usd"
+    ? parseUsdToSatoshis(raw, bchUsdPrice)
+    : parseBchInputToSats(raw);
+}
+
+export function satoshisToUnitInput(
+  satoshis: number,
+  unit: InputCurrencyUnit,
+  bchUsdPrice: number,
 ): string {
-  if (sats <= 0) return "$0.00";
-  const usd = (sats / SATS_PER_BCH_NUMBER) * usdPerBch;
-  if (usd > 0 && usd < 0.01) return "<$0.01";
-  return `~$${usd.toFixed(2)}`;
+  if (satoshis <= 0) return "";
+  return unit === "usd"
+    ? satoshisToUsdInput(satoshis, bchUsdPrice)
+    : formatSatsAsBch(satoshis);
 }
 
 /**
@@ -124,106 +188,28 @@ export function computeBillSummary(
   };
 }
 
-/**
- * Quick inline indicator for whether the cashier CashAddress matches the active network.
- */
-export function isMerchantAddressValidForNetwork(
-  address: string,
-  network: BchNetwork,
-): boolean {
-  return isValidCashAddress(address, network);
-}
-
-/**
- * Builds a canonical `ShareableBillPayload` from a validated draft snapshot.
- */
-export function buildShareablePayloadFromSnapshot(params: {
-  snapshot: ValidatedBillSnapshot;
-  organizerPublicKeyHex: string;
-  billNonceHex: string;
-  createdAt: number;
-}): ShareableBillPayload {
-  const { snapshot, organizerPublicKeyHex, billNonceHex, createdAt } = params;
-  return {
-    v: 1,
-    network: snapshot.network,
-    title: snapshot.title,
-    billNonceHex,
-    merchantAddress: snapshot.merchantAddress,
-    organizerPublicKeyHex,
-    merchantPayoutSatoshis: snapshot.billTotalSats,
-    settlementFeeSatoshis: snapshot.networkFeeSats,
-    participants: snapshot.participants,
-    createdAt,
-  };
-}
-
-/**
- * Validates the complete create-bill form via Zod and maps issues to structured UI fields.
- */
-export function validateBillDraft(input: {
-  network: BchNetwork;
-  title: string;
-  merchantAddress: string;
-  splitMode: SplitMode;
-  participants: SplitParticipantDraft[];
-}):
-  | { ok: true; snapshot: ValidatedBillSnapshot }
-  | { ok: false; firstMessage: string; fieldErrors: CreateBillFieldErrors } {
-  const parsed = createSplitBillSchema.safeParse({
-    network: input.network,
-    title: input.title,
-    merchantAddress: input.merchantAddress,
-    participants: input.participants,
-  });
-
-  if (!parsed.success) {
-    const fieldErrors: CreateBillFieldErrors = {};
-    const participantErrors: Record<string, string> = {};
-
-    for (const issue of parsed.error.issues) {
-      const [root, idx, prop] = issue.path;
-      if (root === "title" && !fieldErrors.title) {
-        fieldErrors.title = issue.message;
-      } else if (root === "merchantAddress" && !fieldErrors.merchantAddress) {
-        fieldErrors.merchantAddress = issue.message;
-      } else if (root === "participants" && typeof idx === "number") {
-        const target = input.participants[idx];
-        if (target && !participantErrors[target.id]) {
-          participantErrors[target.id] = issue.message;
-        }
-        if (prop === "shareSatoshis" && !fieldErrors.amount) {
-          fieldErrors.amount = issue.message;
-        }
-      } else if (root === "participants" && !fieldErrors.amount) {
-        fieldErrors.amount = issue.message;
-      }
-    }
-
-    if (Object.keys(participantErrors).length > 0) {
-      fieldErrors.participants = participantErrors;
-    }
-
-    return {
-      ok: false,
-      firstMessage:
-        parsed.error.issues[0]?.message ?? "Please check the receipt details",
-      fieldErrors,
-    };
+export function buildCustomInputMap(
+  participants: SplitParticipantDraft[],
+  unit: InputCurrencyUnit,
+  priceUsd: number,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const person of participants) {
+    map[person.id] = satoshisToUnitInput(person.shareSatoshis, unit, priceUsd);
   }
+  return map;
+}
 
-  const summary = computeBillSummary(parsed.data.participants);
-  return {
-    ok: true,
-    snapshot: {
-      network: parsed.data.network,
-      title: parsed.data.title,
-      merchantAddress: parsed.data.merchantAddress,
-      splitMode: input.splitMode,
-      participants: parsed.data.participants,
-      billTotalSats: summary.billTotalSats,
-      networkFeeSats: summary.networkFeeSats,
-      sharedPotTargetSats: summary.sharedPotTargetSats,
-    },
-  };
+export function applyEqualSplitToParticipants(
+  participants: SplitParticipantDraft[],
+  rawTotal: string,
+  unit: InputCurrencyUnit,
+  priceUsd: number,
+): SplitParticipantDraft[] {
+  const totalSats = parseUnitInputToSatoshis(rawTotal, unit, priceUsd);
+  const slices = computeEqualSplitSats(totalSats, participants.length);
+  return participants.map((person, idx) => ({
+    ...person,
+    shareSatoshis: slices[idx] ?? 0,
+  }));
 }

@@ -1,12 +1,21 @@
 import { AlertCircle, Plus, Trash2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { SplitParticipantDraft } from "@/store/app-store";
-import { MAX_PARTICIPANTS, type SplitMode } from "../constants";
-import { formatSatsAsBch, formatSatsAsUsdApprox } from "../_utils/billFormMath";
+import {
+  MAX_PARTICIPANTS,
+  type InputCurrencyUnit,
+  type SplitMode,
+} from "../constants";
+import {
+  formatSatsAsBch,
+  formatUsdFromSatoshis,
+} from "../_utils/billFormMath";
 
 interface ParticipantRowsProps {
   participants: SplitParticipantDraft[];
   splitMode: SplitMode;
+  inputUnit: InputCurrencyUnit;
+  priceUsd: number;
   customInputs: Record<string, string>;
   participantErrors?: Record<string, string>;
   canAdd: boolean;
@@ -20,6 +29,8 @@ interface ParticipantRowsProps {
 export function ParticipantRows({
   participants,
   splitMode,
+  inputUnit,
+  priceUsd,
   customInputs,
   participantErrors,
   canAdd,
@@ -29,6 +40,8 @@ export function ParticipantRows({
   onLabelChange,
   onAmountChange,
 }: ParticipantRowsProps) {
+  const isUsd = inputUnit === "usd";
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -41,9 +54,12 @@ export function ParticipantRows({
         </span>
       </div>
 
-      <div className="max-h-64 space-y-2.5 overflow-y-auto pr-0.5">
+      <div className="max-h-72 space-y-2.5 overflow-y-auto pr-0.5">
         {participants.map((person, index) => {
           const rowError = participantErrors?.[person.id];
+          const bchLabel = `${formatSatsAsBch(person.shareSatoshis)} BCH`;
+          const usdLabel = formatUsdFromSatoshis(person.shareSatoshis, priceUsd);
+
           return (
             <div key={person.id} className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -63,31 +79,40 @@ export function ParticipantRows({
                 />
 
                 {splitMode === "equal" ? (
-                  <div className="flex h-10 min-w-[120px] flex-col items-end justify-center rounded-xl border border-dashed border-[#18181B]/25 bg-[#F4F4F5]/75 px-3 text-right">
+                  <div className="flex h-10 min-w-[136px] flex-col items-end justify-center rounded-xl border border-dashed border-[#18181B]/25 bg-[#F4F4F5]/75 px-3 text-right">
                     <span className="font-mono text-xs font-bold text-[#111111]">
-                      {person.shareSatoshis > 0
-                        ? `${formatSatsAsBch(person.shareSatoshis)} BCH`
-                        : "0 BCH"}
+                      {isUsd ? usdLabel : bchLabel}
                     </span>
                     <span className="font-mono text-[10px] text-[#71717A]">
-                      {formatSatsAsUsdApprox(person.shareSatoshis)}
+                      {isUsd
+                        ? `${bchLabel} / ${person.shareSatoshis.toLocaleString()} sats`
+                        : `${usdLabel} / ${person.shareSatoshis.toLocaleString()} sats`}
                     </span>
                   </div>
                 ) : (
                   <div className="relative w-32 shrink-0">
+                    {isUsd ? (
+                      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 font-mono text-xs font-bold text-[#52525B]">
+                        $
+                      </span>
+                    ) : null}
                     <Input
-                      aria-label={`${person.label || `Person ${index + 1}`} slice in BCH`}
+                      aria-label={`${person.label || `Person ${index + 1}`} slice in ${isUsd ? "USD" : "BCH"}`}
                       inputMode="decimal"
-                      placeholder="0.00"
+                      placeholder={isUsd ? "20.00" : "0.00"}
                       value={customInputs[person.id] ?? ""}
                       onChange={(e) =>
                         onAmountChange(person.id, e.target.value)
                       }
-                      className="h-10 rounded-xl border-[1.5px] border-[#18181B]/20 bg-[#FAF9F6] pr-11 pl-3 font-mono text-sm font-semibold text-[#111111] placeholder:text-[#71717A]/60 focus-visible:border-[#18181B] focus-visible:bg-[#FFFFFF]"
+                      className={`h-10 rounded-xl border-[1.5px] border-[#18181B]/20 bg-[#FAF9F6] font-mono text-sm font-semibold text-[#111111] placeholder:text-[#71717A]/60 focus-visible:border-[#18181B] focus-visible:bg-[#FFFFFF] ${
+                        isUsd ? "pr-3 pl-6" : "pr-11 pl-3"
+                      }`}
                     />
-                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-[11px] font-bold text-[#71717A]">
-                      BCH
-                    </span>
+                    {!isUsd ? (
+                      <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-[11px] font-bold text-[#71717A]">
+                        BCH
+                      </span>
+                    ) : null}
                   </div>
                 )}
 
@@ -101,6 +126,14 @@ export function ParticipantRows({
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>
               </div>
+
+              {splitMode === "custom" ? (
+                <p className="pl-10 font-mono text-[10px] text-[#71717A]">
+                  {isUsd
+                    ? `${bchLabel} (${person.shareSatoshis.toLocaleString()} sats)`
+                    : `${usdLabel} (${person.shareSatoshis.toLocaleString()} sats)`}
+                </p>
+              ) : null}
 
               {rowError ? (
                 <p className="inline-flex items-center gap-1.5 pl-10 text-xs font-semibold text-[#18181B]">

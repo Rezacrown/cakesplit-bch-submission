@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import type { BchNetwork } from "@/lib/bch/address";
 
 export interface SplitParticipantDraft {
   id: string;
@@ -8,11 +7,10 @@ export interface SplitParticipantDraft {
 }
 
 interface AppState {
-  network: BchNetwork;
+  readonly network: "mainnet";
   title: string;
   merchantAddress: string;
   participants: SplitParticipantDraft[];
-  setNetwork: (network: BchNetwork) => void;
   setTitle: (title: string) => void;
   setMerchantAddress: (address: string) => void;
   setParticipants: (participants: SplitParticipantDraft[]) => void;
@@ -29,7 +27,6 @@ export const useAppStore = create<AppState>((set) => ({
   title: "",
   merchantAddress: "",
   participants: DEFAULT_PARTICIPANTS,
-  setNetwork: (network) => set({ network }),
   setTitle: (title) => set({ title }),
   setMerchantAddress: (merchantAddress) => set({ merchantAddress }),
   setParticipants: (participants) => set({ participants }),

@@ -8,11 +8,13 @@ import {
 
 interface ParticipantSlicesCardProps {
   participants: BillParticipant[];
+  priceUsd: number;
   onSelectParticipant: (participant: BillParticipant) => void;
 }
 
 export function ParticipantSlicesCard({
   participants,
+  priceUsd,
   onSelectParticipant,
 }: ParticipantSlicesCardProps) {
   return (
@@ -51,7 +53,7 @@ export function ParticipantSlicesCard({
                   {formatBchAmount(person.shareSatoshis)} BCH{" "}
                   <span className="font-normal text-[#71717A]">
                     ({formatSatsCount(person.shareSatoshis)} sats /{" "}
-                    {formatUsdApprox(person.shareSatoshis)})
+                    {formatUsdApprox(person.shareSatoshis, priceUsd)})
                   </span>
                 </p>
               </div>

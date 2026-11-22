@@ -1,15 +1,21 @@
 import { Info } from "lucide-react";
 import {
   formatSatsAsBch,
-  formatSatsAsUsdApprox,
+  formatUsdFromSatoshis,
   type BillSummaryMetrics,
 } from "../_utils/billFormMath";
 
 interface ReceiptTotalsSectionProps {
   summary: BillSummaryMetrics;
+  priceUsd: number;
+  isPriceLive: boolean;
 }
 
-export function ReceiptTotalsSection({ summary }: ReceiptTotalsSectionProps) {
+export function ReceiptTotalsSection({
+  summary,
+  priceUsd,
+  isPriceLive,
+}: ReceiptTotalsSectionProps) {
   return (
     <div className="receipt-perforation space-y-2.5 pt-4 text-xs">
       <div className="flex items-center justify-between text-[#52525B]">
@@ -17,7 +23,7 @@ export function ReceiptTotalsSection({ summary }: ReceiptTotalsSectionProps) {
         <span className="font-mono font-bold text-[#111111]">
           {formatSatsAsBch(summary.billTotalSats)} BCH{" "}
           <span className="font-normal text-[#71717A]">
-            ({formatSatsAsUsdApprox(summary.billTotalSats)})
+            ({formatUsdFromSatoshis(summary.billTotalSats, priceUsd)})
           </span>
         </span>
       </div>
@@ -29,13 +35,19 @@ export function ReceiptTotalsSection({ summary }: ReceiptTotalsSectionProps) {
         </span>
         <span className="text-right font-mono font-semibold text-[#111111]">
           {summary.networkFeeSats.toLocaleString()} sats{" "}
-          <span className="font-normal text-[#71717A]">(&lt;$0.01)</span>
+          <span className="font-normal text-[#71717A]">
+            ({formatUsdFromSatoshis(summary.networkFeeSats, priceUsd)})
+          </span>
         </span>
       </div>
 
       <p className="text-[11px] leading-relaxed text-[#71717A]">
         A fixed 500-sat fee reserve is built into the pot so anyone at the table
-        can pay the cashier in one tap once full.
+        can pay the cashier in one tap once full.{" "}
+        <span className="font-mono text-[#52525B]">
+          {isPriceLive ? "Live rate" : "Ref rate"}: 1 BCH = $
+          {priceUsd.toFixed(2)}
+        </span>
       </p>
 
       <div className="receipt-perforation flex items-baseline justify-between pt-3.5">
@@ -48,7 +60,7 @@ export function ReceiptTotalsSection({ summary }: ReceiptTotalsSectionProps) {
           </p>
           <p className="font-mono text-[11px] font-medium text-[#71717A]">
             {summary.sharedPotTargetSats.toLocaleString()} sats (
-            {formatSatsAsUsdApprox(summary.sharedPotTargetSats)})
+            {formatUsdFromSatoshis(summary.sharedPotTargetSats, priceUsd)})
           </p>
         </div>
       </div>

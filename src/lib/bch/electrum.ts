@@ -17,8 +17,9 @@ export interface ElectrumServerEndpoint {
 export const DEFAULT_ELECTRUM_SERVERS: Record<BchNetwork, ElectrumServerEndpoint[]> = {
   mainnet: [
     { host: "bch.imaginary.cash", port: 50004, scheme: "wss" },
-    { host: "electroncash.de", port: 50004, scheme: "wss" },
-    { host: "fulcrum.fountainhead.cash", port: 50004, scheme: "wss" },
+    { host: "electrum.imaginary.cash", port: 50004, scheme: "wss" },
+    { host: "cashnode.bch.ninja", port: 50004, scheme: "wss" },
+    { host: "fulcrum.greyh.at", port: 50004, scheme: "wss" },
   ],
   chipnet: [
     { host: "chipnet.bch.ninja", port: 50004, scheme: "wss" },

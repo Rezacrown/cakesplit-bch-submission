@@ -1,5 +1,3 @@
-export const USD_PER_BCH_REF = 200;
-
 export const COMPATIBLE_WALLETS = ["Cashonize", "Paytaca", "Selene"] as const;
 
 export const OPEN_PROMPT_COPY = {

@@ -17,13 +17,14 @@ Any new session must treat these three combined targets as the active scope:
 
 - **Concept:** Trustless on-chain group split-bill dApp (`CakeSplit`) backed by a 113-byte P2SH32 **Bill Pot Covenant** XO Template (`openBill`, `chipIn`, `settleBill`, `cancelBill`, zero timelock, supports both XO follow-up invitations and universal any-wallet BIP21 QR scan sweeping).
 - **XO Template ID:** `332154d13ae190aff7da5a601aea3f94b8547393ce509c31b01cfde078163e4a` (`@xo-cash/engine@0.1.1-next.18230317763`, artifacts in `artifacts/xo/`, verified on `https://blaze.xo.cash/` — screenshot in `docs/debug-tool/blaze-xo-openBill-inspect.png`).
-- **Stack:** Next.js `16.4.6` (ESM + Turbopack), React `19.3`, Tailwind CSS v4, `shadcn/ui`, TanStack Query v5, Zod v4, Zustand v5, `@xo-cash/*`, `@bitauth/libauth` v3, `@electrum-cash/network` v4, Vitest v5 (`29/29` passing).
+- **Stack & Architecture:** Next.js `16.4.6` (ESM + Turbopack, `images: { unoptimized: true }`), React `19.3`, Tailwind CSS v4, `shadcn/ui` monochrome neutral rubber-hose ink cartoon aesthetic (zero emojis, 11 alpha-transparent mascot PNGs in `public/mascots/`), 5-layer `structuring-frontend` (< 250 lines/file), TanStack Query v5, Zod v4, Zustand v5, `@xo-cash/*`, `@bitauth/libauth` v3, `@electrum-cash/network` v4, Vitest v5 (`33/33` passing).
+- **Network Scope:** **Mainnet-only UI** (`bch.imaginary.cash`, `electrum.imaginary.cash`, `cashnode.bch.ninja`, `fulcrum.greyh.at` WSS port `50004`, live 4s 0-conf polling, pre-flight BCH 2026 VM verification before broadcast, live Coinbase/CoinGecko BCH/USD rate with `USD | BCH` input toggle). Library/tests retain `"mainnet" | "chipnet"` compatibility.
 - **Mainnet Wallet (Public):** BCH `bitcoincash:qr4jg99w7eeupyd9hch370t3ffkd8kmmfszwxk6ml2` | CashTokens (`EMBER2026` banner) `bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe`.
 - **Current Milestone Status:**
-  - ✅ Scaffold + Contract + Utilities + Signed XO Invitations + `29/29` tests (`#2` closed)
+  - ✅ `#2` Contract + XO Template + Signed XO Invitations + Utilities (`closed`)
   - ✅ `blaze.xo.cash` live `Import Template` + `Join Invitation` verified (`docs/debug-tool/blaze-xo-openBill-inspect.png`)
-  - ⏳ `#3` UI pages (`/` Create Bill, `/bill` Live Pot + QR + XO Inspector, Mainnet Track Top Banner) — awaiting user's shadcn design reference
-  - ⏳ `#4` Live Chipnet/Mainnet execution proof, deploy, Widget Factory slides, human-written ~500-word XO feedback, Media Track asset, make repo Public, Telegram `@bchblaze` & DoraHacks submit
+  - ✅ `#3` Full 4-page monochrome ink UI (`/`, `/create`, `/bill`, `/xo`) + `USD | BCH` live price toggle + Live Mainnet Electrum/Fulcrum polling & `settleBill`/`cancelBill` broadcast (`closed`, `33/33` tests, `typecheck`/`lint`/`build` PASS)
+  - ⏳ `#4` Execute real Mainnet proof tx & archive txids/broadcasted XO invitations, deploy live URL (Vercel) & plug Widget Factory Slides link into `BlazeTopBanner.tsx`, write ~500 words personal (non-AI) XO feedback, create Media Track asset, switch GitHub repo to **Public**, check in on Telegram `@bchblaze` & submit on DoraHacks before `2026-11-22 21:00 WIB`
 
 ## Agent skills
 
@@ -38,3 +39,13 @@ Five canonical triage labels separating autonomous agent tasks (`ready-for-agent
 ### Domain docs
 
 Single-context layout (`GLOSSARY.md` and `docs/adr/` at repo root). See `docs/agents/domain.md`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

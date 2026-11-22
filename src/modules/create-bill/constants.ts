@@ -1,16 +1,16 @@
 export const SETTLEMENT_FEE_SATS = 500;
-export const USD_PER_BCH_REF = 200;
 export const MIN_PARTICIPANTS = 2;
 export const MAX_PARTICIPANTS = 12;
 export const MIN_SLICE_SATS = 1_000;
 
 export type SplitMode = "equal" | "custom";
+export type InputCurrencyUnit = "usd" | "bch";
 
 export const CREATE_PAGE_COPY = {
   eyebrow: "NEW TABLE CHECK",
   title: "Create a Table Check",
   subtitle:
-    "Set the total, add your friends, and share one Bitcoin Cash payment link.",
+    "Set the total in USD or BCH, add your friends, and share one Bitcoin Cash Mainnet payment link.",
 } as const;
 
 export interface TrustGuarantee {

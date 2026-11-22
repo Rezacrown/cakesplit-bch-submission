@@ -2,24 +2,22 @@ import type { FormEvent } from "react";
 import { AlertCircle, ArrowRight, CheckCircle2, Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { BchNetwork } from "@/lib/bch/address";
 import type { SplitParticipantDraft } from "@/store/app-store";
-import { USD_PER_BCH_REF, type SplitMode } from "../constants";
-import {
-  formatSatsAsUsdApprox,
-  type BillSummaryMetrics,
-  type CreateBillFieldErrors,
-} from "../_utils/billFormMath";
+import type { InputCurrencyUnit, SplitMode } from "../constants";
+import type { BillSummaryMetrics } from "../_utils/billFormMath";
+import type { CreateBillFieldErrors } from "../_utils/billFormValidation";
+import { AmountUnitSection } from "./AmountUnitSection";
 import { ParticipantRows } from "./ParticipantRows";
 import { ReceiptTotalsSection } from "./ReceiptTotalsSection";
 
 interface SplitBillReceiptCardProps {
-  network: BchNetwork;
   title: string;
   merchantAddress: string;
   participants: SplitParticipantDraft[];
   splitMode: SplitMode;
+  inputUnit: InputCurrencyUnit;
+  priceUsd: number;
+  isPriceLive: boolean;
   totalBillInput: string;
   customInputs: Record<string, string>;
   summary: BillSummaryMetrics;
@@ -32,6 +30,7 @@ interface SplitBillReceiptCardProps {
   onMerchantAddressChange: (value: string) => void;
   onTotalBillChange: (value: string) => void;
   onSplitModeChange: (mode: SplitMode) => void;
+  onInputUnitChange: (unit: InputCurrencyUnit) => void;
   onAddParticipant: () => void;
   onRemoveParticipant: (id: string) => void;
   onParticipantLabelChange: (id: string, label: string) => void;
@@ -41,11 +40,13 @@ interface SplitBillReceiptCardProps {
 
 export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
   const {
-    network,
     title,
     merchantAddress,
     participants,
     splitMode,
+    inputUnit,
+    priceUsd,
+    isPriceLive,
     totalBillInput,
     customInputs,
     summary,
@@ -58,6 +59,7 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
     onMerchantAddressChange,
     onTotalBillChange,
     onSplitModeChange,
+    onInputUnitChange,
     onAddParticipant,
     onRemoveParticipant,
     onParticipantLabelChange,
@@ -65,14 +67,9 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
     onSubmit,
   } = props;
 
-  const addressPlaceholder =
-    network === "mainnet" ? "bitcoincash:q..." : "bchtest:q...";
-  const networkLabel =
-    network === "mainnet" ? "Bitcoin Cash Mainnet" : "Bitcoin Cash Chipnet";
-
   return (
     <div className="ink-card overflow-hidden rounded-3xl">
-      <div className="paper-stipple flex items-center justify-between border-b-[1.5px] border-[#18181B]/15 bg-[#F4F4F5] px-5 py-3.5 sm:px-6">
+      <div className="paper-stipple flex flex-wrap items-center justify-between gap-2 border-b-[1.5px] border-[#18181B]/15 bg-[#F4F4F5] px-5 py-3.5 sm:px-6">
         <div className="flex items-center gap-2">
           <Receipt className="size-4 text-[#111111]" aria-hidden="true" />
           <span className="font-mono text-xs font-bold tracking-widest text-[#111111] uppercase">
@@ -84,7 +81,7 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
             className="size-1.5 rounded-full bg-[#18181B]"
             aria-hidden="true"
           />
-          {networkLabel}
+          Bitcoin Cash Mainnet
         </span>
       </div>
 
@@ -124,13 +121,13 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
               {isAddressValid ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#18181B]/20 bg-[#F4F4F5] px-2.5 py-0.5 font-mono text-[11px] font-bold text-[#111111]">
                   <CheckCircle2 className="size-3" aria-hidden="true" />
-                  Valid {network}
+                  Valid Mainnet
                 </span>
               ) : null}
             </div>
             <Input
               id="merchant-address"
-              placeholder={addressPlaceholder}
+              placeholder="bitcoincash:q..."
               value={merchantAddress}
               onChange={(e) => onMerchantAddressChange(e.target.value)}
               aria-invalid={Boolean(fieldErrors.merchantAddress)}
@@ -144,66 +141,23 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
             ) : null}
           </div>
 
-          <div className="space-y-3.5">
-            <Tabs
-              value={splitMode}
-              onValueChange={(val) => {
-                if (val === "equal" || val === "custom") {
-                  onSplitModeChange(val);
-                }
-              }}
-            >
-              <TabsList className="grid h-11 w-full grid-cols-2 rounded-full border border-[#E4E4E7] bg-[#F4F4F5] p-1">
-                <TabsTrigger
-                  value="equal"
-                  className="rounded-full text-xs font-bold text-[#52525B] data-active:bg-[#18181B] data-active:text-[#FAF9F6]"
-                >
-                  Equal Split
-                </TabsTrigger>
-                <TabsTrigger
-                  value="custom"
-                  className="rounded-full text-xs font-bold text-[#52525B] data-active:bg-[#18181B] data-active:text-[#FAF9F6]"
-                >
-                  Custom Slices
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            {splitMode === "equal" ? (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor="total-bill-bch"
-                    className="font-mono text-[11px] font-bold tracking-wider text-[#18181B] uppercase"
-                  >
-                    Total Bill (BCH)
-                  </Label>
-                  <span className="font-mono text-xs font-medium text-[#71717A]">
-                    {formatSatsAsUsdApprox(summary.billTotalSats)} at $
-                    {USD_PER_BCH_REF}/BCH
-                  </span>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="total-bill-bch"
-                    inputMode="decimal"
-                    placeholder="0.10"
-                    value={totalBillInput}
-                    onChange={(e) => onTotalBillChange(e.target.value)}
-                    aria-invalid={Boolean(fieldErrors.amount)}
-                    className="h-12 rounded-xl border-[1.5px] border-[#18181B]/20 bg-[#FAF9F6] pr-14 pl-3.5 font-mono text-base font-bold text-[#111111] placeholder:text-[#71717A]/60 focus-visible:border-[#18181B] focus-visible:bg-[#FFFFFF]"
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-mono text-xs font-extrabold text-[#111111]">
-                    BCH
-                  </span>
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <AmountUnitSection
+            splitMode={splitMode}
+            inputUnit={inputUnit}
+            priceUsd={priceUsd}
+            totalBillInput={totalBillInput}
+            billTotalSats={summary.billTotalSats}
+            hasAmountError={Boolean(fieldErrors.amount)}
+            onSplitModeChange={onSplitModeChange}
+            onInputUnitChange={onInputUnitChange}
+            onTotalBillChange={onTotalBillChange}
+          />
 
           <ParticipantRows
             participants={participants}
             splitMode={splitMode}
+            inputUnit={inputUnit}
+            priceUsd={priceUsd}
             customInputs={customInputs}
             participantErrors={fieldErrors.participants}
             canAdd={canAddParticipant}
@@ -214,14 +168,20 @@ export function SplitBillReceiptCard(props: SplitBillReceiptCardProps) {
             onAmountChange={onParticipantAmountChange}
           />
 
-          <ReceiptTotalsSection summary={summary} />
+          <ReceiptTotalsSection
+            summary={summary}
+            priceUsd={priceUsd}
+            isPriceLive={isPriceLive}
+          />
 
           <button
             type="submit"
             disabled={isOpening}
             className="ink-pill-primary inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-full px-6 py-4 font-display text-base font-bold disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span>{isOpening ? "Opening Table Check..." : "Create Table Check"}</span>
+            <span>
+              {isOpening ? "Opening Table Check..." : "Create Table Check"}
+            </span>
             <ArrowRight className="size-4" aria-hidden="true" />
           </button>
         </form>

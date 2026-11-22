@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useBchPrice } from "@/hooks/useBchPrice";
 import {
   buildShareableBillUrl,
   generatePaymentQrDataUrl,
@@ -13,6 +14,7 @@ import {
   extractBillToken,
   parseAndCompileBillToken,
 } from "../_utils/billRoomHelpers";
+import { useBillPotNetwork } from "./useBillPotNetwork";
 
 export type BillParticipant = ShareableBillPayload["participants"][number];
 
@@ -29,9 +31,9 @@ export function useBillRoom() {
 
   const [pasteInput, setPasteInput] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
-
   const [shareQrOpen, setShareQrOpen] = useState(false);
   const [shareQrDataUrl, setShareQrDataUrl] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const [selectedParticipant, setSelectedParticipant] =
     useState<BillParticipant | null>(null);
@@ -48,6 +50,9 @@ export function useBillRoom() {
   const invalidTokenError =
     parsedResult && !parsedResult.ok ? parsedResult.error : null;
 
+  const { priceUsd, isLive: isPriceLive } = useBchPrice();
+  const potNetwork = useBillPotNetwork(activeBill);
+
   const getShareUrl = (): string => {
     if (!activeBill) return "";
     const origin =
@@ -60,7 +65,7 @@ export function useBillRoom() {
       await navigator.clipboard.writeText(text);
       toast.success(successLabel);
     } catch {
-      toast.error("Clipboard unavailable — please copy manually.");
+      toast.error("Clipboard unavailable - please copy manually.");
     }
   };
 
@@ -83,16 +88,10 @@ export function useBillRoom() {
     router.push(`/bill?d=${extracted}`);
   };
 
-  const handleCopyBillLink = () => {
-    const url = getShareUrl();
-    if (url) void copyText(url, "Copied table check link to clipboard");
-  };
-
   const handleOpenShareQr = () => {
     if (!activeBill) return;
     setShareQrOpen(true);
     setShareQrDataUrl(null);
-
     const shareUrl = getShareUrl();
     void generateUrlQrDataUrl(shareUrl, { width: 260, margin: 2 })
       .then((url) => setShareQrDataUrl(url))
@@ -139,34 +138,26 @@ export function useBillRoom() {
     setIsGeneratingPaymentQr(false);
   };
 
-  const handleCopyPotAddress = () => {
-    if (!activeBill) return;
-    void copyText(
-      activeBill.contract.contractAddress,
-      "Copied shared pot CashAddress to clipboard",
-    );
-  };
-
-  const handleCopyCashierAddress = () => {
-    if (!activeBill) return;
-    void copyText(
-      activeBill.bill.merchantAddress,
-      "Copied cashier CashAddress to clipboard",
-    );
-  };
-
-  const handleCopyPaymentUri = () => {
-    if (!paymentQr) return;
-    void copyText(paymentQr.uri, "Copied BIP21 payment URI to clipboard");
+  const handleConfirmCancelBill = async (refundAddress: string) => {
+    try {
+      await potNetwork.onCancelBill(refundAddress);
+      setCancelDialogOpen(false);
+    } catch {
+      // Toast and error state are handled by the cancel mutation.
+    }
   };
 
   return {
     activeBill,
     invalidTokenError,
+    priceUsd,
+    isPriceLive,
+    ...potNetwork,
     pasteInput,
     pasteError,
     shareQrOpen,
     shareQrDataUrl,
+    cancelDialogOpen,
     selectedParticipant,
     paymentQr,
     isGeneratingPaymentQr,
@@ -175,13 +166,39 @@ export function useBillRoom() {
       if (pasteError) setPasteError(null);
     },
     onOpenSubmittedBill: handleOpenSubmittedBill,
-    onCopyBillLink: handleCopyBillLink,
+    onCopyBillLink: () => {
+      const url = getShareUrl();
+      if (url) void copyText(url, "Copied table check link to clipboard");
+    },
     onOpenShareQr: handleOpenShareQr,
     onCloseShareQr: () => setShareQrOpen(false),
-    onCopyPotAddress: handleCopyPotAddress,
-    onCopyCashierAddress: handleCopyCashierAddress,
+    onCopyPotAddress: () => {
+      if (!activeBill) return;
+      void copyText(
+        activeBill.contract.contractAddress,
+        "Copied shared pot CashAddress to clipboard",
+      );
+    },
+    onCopyCashierAddress: () => {
+      if (!activeBill) return;
+      void copyText(
+        activeBill.bill.merchantAddress,
+        "Copied cashier CashAddress to clipboard",
+      );
+    },
     onSelectParticipant: handleSelectParticipant,
     onClosePaymentQr: handleClosePaymentQr,
-    onCopyPaymentUri: handleCopyPaymentUri,
+    onCopyPaymentUri: () => {
+      if (!paymentQr) return;
+      void copyText(paymentQr.uri, "Copied BIP21 payment URI to clipboard");
+    },
+    onOpenCancelDialog: () => setCancelDialogOpen(true),
+    onCloseCancelDialog: () => setCancelDialogOpen(false),
+    onConfirmCancelBill: handleConfirmCancelBill,
+    onCopyBroadcastInvitationJson: () => {
+      const json = potNetwork.broadcastReceipt?.invitationJson;
+      if (!json) return;
+      void copyText(json, "Copied broadcasted XO Invitation JSON to clipboard");
+    },
   };
 }

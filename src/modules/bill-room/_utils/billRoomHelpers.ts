@@ -8,7 +8,7 @@ import {
   type PotProgress,
   type ShareableBillPayload,
 } from "@/lib/bch";
-import { USD_PER_BCH_REF } from "../constants";
+import { FALLBACK_BCH_USD_PRICE } from "@/services/client/priceService";
 
 const SATS_PER_BCH_NUMBER = 100_000_000;
 
@@ -109,17 +109,37 @@ export function formatBchAmount(sats: bigint | number): string {
   return satsToBch(sats);
 }
 
+/**
+ * Formats satoshis as a live USD string, showing up to 4 decimals for micro amounts
+ * (e.g. $0.008) so low-value Mainnet testing stays legible.
+ */
 export function formatUsdApprox(
   sats: bigint | number,
-  usdPerBch = USD_PER_BCH_REF,
+  usdPerBch = FALLBACK_BCH_USD_PRICE,
 ): string {
   const value = typeof sats === "bigint" ? Number(sats) : Math.trunc(sats);
-  if (value <= 0) return "$0.00";
+  if (value <= 0 || !Number.isFinite(usdPerBch) || usdPerBch <= 0) {
+    return "$0.00";
+  }
   const usd = (value / SATS_PER_BCH_NUMBER) * usdPerBch;
-  if (usd > 0 && usd < 0.01) return "<$0.01";
-  return `~$${usd.toFixed(2)}`;
+  if (usd >= 0.01) {
+    return `$${usd.toFixed(2)}`;
+  }
+  if (usd >= 0.0001) {
+    return `$${usd.toFixed(4).replace(/0+$/, "")}`;
+  }
+  return "< $0.01";
 }
 
 export function formatNetworkBadge(network: BchNetwork): string {
   return network === "mainnet" ? "Bitcoin Cash Mainnet" : "Chipnet";
+}
+
+export function formatSyncTimestamp(timestampMs: number | null): string {
+  if (!timestampMs) return "";
+  return new Date(timestampMs).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }

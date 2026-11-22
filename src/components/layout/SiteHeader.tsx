@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import type { BchNetwork } from "@/lib/bch/address";
-import { useAppStore } from "@/store/app-store";
 
 interface NavItem {
   href: string;
@@ -18,11 +16,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/xo", label: "XO Contract" },
 ];
 
-const NETWORK_OPTIONS: { value: BchNetwork; label: string }[] = [
-  { value: "mainnet", label: "Mainnet" },
-  { value: "chipnet", label: "Chipnet" },
-];
-
 function isRouteActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -30,8 +23,6 @@ function isRouteActive(pathname: string, href: string): boolean {
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const network = useAppStore((s) => s.network);
-  const setNetwork = useAppStore((s) => s.setNetwork);
   const isCreatePage = pathname === "/create";
 
   return (
@@ -79,30 +70,16 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <div
-            role="group"
-            aria-label="Bitcoin Cash network"
-            className="inline-flex items-center rounded-full border border-[#E4E4E7] bg-[#F4F4F5] p-0.5"
+          <span
+            aria-label="Bitcoin Cash Mainnet"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#18181B]/25 bg-[#FFFFFF] px-3 py-1 font-mono text-[11px] font-bold text-[#111111]"
           >
-            {NETWORK_OPTIONS.map((option) => {
-              const selected = network === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setNetwork(option.value)}
-                  aria-pressed={selected}
-                  className={`cursor-pointer rounded-full px-2.5 py-1 font-mono text-[11px] font-bold transition-all ${
-                    selected
-                      ? "border border-[#18181B]/20 bg-[#FFFFFF] text-[#111111] shadow-xs"
-                      : "border border-transparent text-[#71717A] hover:text-[#111111]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
+            <span
+              className="size-1.5 rounded-full bg-[#18181B]"
+              aria-hidden="true"
+            />
+            <span>Mainnet</span>
+          </span>
 
           {!isCreatePage ? (
             <Link

@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useBchPrice } from "@/hooks/useBchPrice";
 import {
   encodeShareableBill,
   generateRandomBillNonceHex,
@@ -12,35 +13,29 @@ import { useAppStore, type SplitParticipantDraft } from "@/store/app-store";
 import {
   MAX_PARTICIPANTS,
   MIN_PARTICIPANTS,
+  type InputCurrencyUnit,
   type SplitMode,
 } from "../constants";
 import {
-  buildShareablePayloadFromSnapshot,
+  applyEqualSplitToParticipants,
+  buildCustomInputMap,
   computeBillSummary,
-  computeEqualSplitSats,
-  formatSatsAsBch,
+  parseUnitInputToSatoshis,
+  satoshisToUnitInput,
+} from "../_utils/billFormMath";
+import {
+  buildShareablePayloadFromSnapshot,
   isMerchantAddressValidForNetwork,
-  parseBchInputToSats,
   validateBillDraft,
   type CreateBillFieldErrors,
-} from "../_utils/billFormMath";
+} from "../_utils/billFormValidation";
 
-const DECIMAL_INPUT_PATTERN = /^\d*(\.\d{0,8})?$/;
-
-function buildCustomInputMap(
-  participants: SplitParticipantDraft[],
-): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const person of participants) {
-    map[person.id] =
-      person.shareSatoshis > 0 ? formatSatsAsBch(person.shareSatoshis) : "";
-  }
-  return map;
-}
+const USD_INPUT_PATTERN = /^\d*(\.\d{0,4})?$/;
+const BCH_INPUT_PATTERN = /^\d*(\.\d{0,8})?$/;
 
 export function useCreateBillForm() {
   const router = useRouter();
-  const network = useAppStore((s) => s.network);
+  const network = "mainnet" as const;
   const title = useAppStore((s) => s.title);
   const merchantAddress = useAppStore((s) => s.merchantAddress);
   const participants = useAppStore((s) => s.participants);
@@ -48,60 +43,69 @@ export function useCreateBillForm() {
   const setMerchantAddress = useAppStore((s) => s.setMerchantAddress);
   const setParticipants = useAppStore((s) => s.setParticipants);
 
+  const { priceUsd, isLive: isPriceLive, source: priceSource } = useBchPrice();
+
+  const [inputUnit, setInputUnit] = useState<InputCurrencyUnit>("usd");
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
-  const [totalBillInput, setTotalBillInput] = useState(() => {
-    const initialTotal = computeBillSummary(participants).billTotalSats;
-    return initialTotal > 0 ? formatSatsAsBch(initialTotal) : "";
-  });
+  const [totalBillInput, setTotalBillInput] = useState(() =>
+    satoshisToUnitInput(computeBillSummary(participants).billTotalSats, "usd", priceUsd),
+  );
   const [customInputs, setCustomInputs] = useState<Record<string, string>>(() =>
-    buildCustomInputMap(participants),
+    buildCustomInputMap(participants, "usd", priceUsd),
   );
   const [fieldErrors, setFieldErrors] = useState<CreateBillFieldErrors>({});
   const [isOpening, setIsOpening] = useState(false);
 
-  const summary = useMemo(
-    () => computeBillSummary(participants),
-    [participants],
-  );
+  const lastPriceRef = useRef(priceUsd);
 
+  useEffect(() => {
+    if (lastPriceRef.current === priceUsd) return;
+    lastPriceRef.current = priceUsd;
+    if (inputUnit !== "usd") return;
+    const currentParticipants = useAppStore.getState().participants;
+    if (splitMode === "equal") {
+      if (!totalBillInput) return;
+      setParticipants(
+        applyEqualSplitToParticipants(currentParticipants, totalBillInput, "usd", priceUsd),
+      );
+      return;
+    }
+    if (!Object.values(customInputs).some((v) => v.trim().length > 0)) return;
+    setParticipants(
+      currentParticipants.map((p) => ({
+        ...p,
+        shareSatoshis: parseUnitInputToSatoshis(customInputs[p.id] ?? "", "usd", priceUsd),
+      })),
+    );
+  }, [priceUsd, inputUnit, splitMode, totalBillInput, customInputs, setParticipants]);
+
+  const summary = useMemo(() => computeBillSummary(participants), [participants]);
   const isAddressValid = useMemo(
     () => isMerchantAddressValidForNetwork(merchantAddress, network),
-    [merchantAddress, network],
+    [merchantAddress],
   );
-
   const clearErrors = () => {
-    if (Object.keys(fieldErrors).length > 0) {
-      setFieldErrors({});
+    if (Object.keys(fieldErrors).length > 0) setFieldErrors({});
+  };
+
+  const handleInputUnitChange = (nextUnit: InputCurrencyUnit) => {
+    if (nextUnit === inputUnit) return;
+    const totalSats = computeBillSummary(participants).billTotalSats;
+    setInputUnit(nextUnit);
+    if (splitMode === "equal") {
+      setTotalBillInput(satoshisToUnitInput(totalSats, nextUnit, priceUsd));
+    } else {
+      setCustomInputs(buildCustomInputMap(participants, nextUnit, priceUsd));
     }
-  };
-
-  const applyEqualShares = (
-    nextList: SplitParticipantDraft[],
-    rawTotal: string,
-  ) => {
-    const totalSats = parseBchInputToSats(rawTotal);
-    const slices = computeEqualSplitSats(totalSats, nextList.length);
-    return nextList.map((person, idx) => ({
-      ...person,
-      shareSatoshis: slices[idx] ?? 0,
-    }));
-  };
-
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    if (fieldErrors.title) clearErrors();
-  };
-
-  const handleMerchantAddressChange = (value: string) => {
-    setMerchantAddress(value);
-    if (fieldErrors.merchantAddress) clearErrors();
+    clearErrors();
   };
 
   const handleTotalBillChange = (value: string) => {
     const normalized = value.replace(/,/g, "");
-    if (!DECIMAL_INPUT_PATTERN.test(normalized)) return;
+    const pattern = inputUnit === "usd" ? USD_INPUT_PATTERN : BCH_INPUT_PATTERN;
+    if (!pattern.test(normalized)) return;
     setTotalBillInput(normalized);
-    setParticipants(applyEqualShares(participants, normalized));
+    setParticipants(applyEqualSplitToParticipants(participants, normalized, inputUnit, priceUsd));
     if (fieldErrors.amount) clearErrors();
   };
 
@@ -109,15 +113,13 @@ export function useCreateBillForm() {
     if (nextMode === splitMode) return;
     setSplitMode(nextMode);
     clearErrors();
-
     if (nextMode === "equal") {
-      const currentTotalSats = computeBillSummary(participants).billTotalSats;
-      const nextTotalText =
-        currentTotalSats > 0 ? formatSatsAsBch(currentTotalSats) : "";
-      setTotalBillInput(nextTotalText);
-      setParticipants(applyEqualShares(participants, nextTotalText));
+      const totalSats = computeBillSummary(participants).billTotalSats;
+      const nextText = satoshisToUnitInput(totalSats, inputUnit, priceUsd);
+      setTotalBillInput(nextText);
+      setParticipants(applyEqualSplitToParticipants(participants, nextText, inputUnit, priceUsd));
     } else {
-      setCustomInputs(buildCustomInputMap(participants));
+      setCustomInputs(buildCustomInputMap(participants, inputUnit, priceUsd));
     }
   };
 
@@ -129,9 +131,8 @@ export function useCreateBillForm() {
       ...participants,
       { id: newId, label: `Friend ${nextIndex}`, shareSatoshis: 0 },
     ];
-
     if (splitMode === "equal") {
-      setParticipants(applyEqualShares(appended, totalBillInput));
+      setParticipants(applyEqualSplitToParticipants(appended, totalBillInput, inputUnit, priceUsd));
     } else {
       setParticipants(appended);
       setCustomInputs((prev) => ({ ...prev, [newId]: "" }));
@@ -142,9 +143,8 @@ export function useCreateBillForm() {
   const handleRemoveParticipant = (id: string) => {
     if (participants.length <= MIN_PARTICIPANTS) return;
     const filtered = participants.filter((p) => p.id !== id);
-
     if (splitMode === "equal") {
-      setParticipants(applyEqualShares(filtered, totalBillInput));
+      setParticipants(applyEqualSplitToParticipants(filtered, totalBillInput, inputUnit, priceUsd));
     } else {
       setParticipants(filtered);
       setCustomInputs((prev) => {
@@ -156,61 +156,36 @@ export function useCreateBillForm() {
     clearErrors();
   };
 
-  const handleParticipantLabelChange = (id: string, label: string) => {
-    setParticipants(
-      participants.map((p) => (p.id === id ? { ...p, label } : p)),
-    );
-    if (fieldErrors.participants?.[id]) clearErrors();
-  };
-
   const handleParticipantAmountChange = (id: string, raw: string) => {
     const normalized = raw.replace(/,/g, "");
-    if (!DECIMAL_INPUT_PATTERN.test(normalized)) return;
+    const pattern = inputUnit === "usd" ? USD_INPUT_PATTERN : BCH_INPUT_PATTERN;
+    if (!pattern.test(normalized)) return;
     setCustomInputs((prev) => ({ ...prev, [id]: normalized }));
-    const sats = parseBchInputToSats(normalized);
-    setParticipants(
-      participants.map((p) =>
-        p.id === id ? { ...p, shareSatoshis: sats } : p,
-      ),
-    );
-    if (fieldErrors.amount || fieldErrors.participants?.[id]) {
-      clearErrors();
-    }
+    const sats = parseUnitInputToSatoshis(normalized, inputUnit, priceUsd);
+    setParticipants(participants.map((p) => (p.id === id ? { ...p, shareSatoshis: sats } : p)));
+    if (fieldErrors.amount || fieldErrors.participants?.[id]) clearErrors();
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const result = validateBillDraft({
-      network,
-      title,
-      merchantAddress,
-      splitMode,
-      participants,
-    });
-
+    const result = validateBillDraft({ network, title, merchantAddress, splitMode, participants });
     if (!result.ok) {
       setFieldErrors(result.fieldErrors);
       toast.error(result.firstMessage);
       return;
     }
-
     try {
       setIsOpening(true);
       setFieldErrors({});
-      const organizerKey = loadOrCreateOrganizerKey(result.snapshot.network);
-      const billNonceHex = generateRandomBillNonceHex(8);
+      const organizerKey = loadOrCreateOrganizerKey(network);
       const payload = buildShareablePayloadFromSnapshot({
         snapshot: result.snapshot,
         organizerPublicKeyHex: organizerKey.publicKeyHex,
-        billNonceHex,
+        billNonceHex: generateRandomBillNonceHex(8),
         createdAt: Date.now(),
       });
-      const token = encodeShareableBill(payload);
-
-      toast.success(
-        `${result.snapshot.title} is ready — opening your table check.`,
-      );
-      router.push(`/bill?d=${token}`);
+      toast.success(`${result.snapshot.title} is ready - opening your table check.`);
+      router.push(`/bill?d=${encodeShareableBill(payload)}`);
     } catch (error) {
       setIsOpening(false);
       toast.error(
@@ -222,11 +197,14 @@ export function useCreateBillForm() {
   };
 
   return {
-    network,
     title,
     merchantAddress,
     participants,
     splitMode,
+    inputUnit,
+    priceUsd,
+    isPriceLive,
+    priceSource,
     totalBillInput,
     customInputs,
     summary,
@@ -235,13 +213,23 @@ export function useCreateBillForm() {
     isOpening,
     canAddParticipant: participants.length < MAX_PARTICIPANTS,
     canRemoveParticipant: participants.length > MIN_PARTICIPANTS,
-    onTitleChange: handleTitleChange,
-    onMerchantAddressChange: handleMerchantAddressChange,
+    onTitleChange: (value: string) => {
+      setTitle(value);
+      if (fieldErrors.title) clearErrors();
+    },
+    onMerchantAddressChange: (value: string) => {
+      setMerchantAddress(value);
+      if (fieldErrors.merchantAddress) clearErrors();
+    },
     onTotalBillChange: handleTotalBillChange,
     onSplitModeChange: handleSplitModeChange,
+    onInputUnitChange: handleInputUnitChange,
     onAddParticipant: handleAddParticipant,
     onRemoveParticipant: handleRemoveParticipant,
-    onParticipantLabelChange: handleParticipantLabelChange,
+    onParticipantLabelChange: (id: string, label: string) => {
+      setParticipants(participants.map((p) => (p.id === id ? { ...p, label } : p)));
+      if (fieldErrors.participants?.[id]) clearErrors();
+    },
     onParticipantAmountChange: handleParticipantAmountChange,
     onSubmit: handleSubmit,
   };

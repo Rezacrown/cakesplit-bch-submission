@@ -1,15 +1,33 @@
-import { CheckCircle2, Clock, Copy, Link2, QrCode, Wallet } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Copy,
+  Link2,
+  QrCode,
+  RotateCcw,
+  Wallet,
+} from "lucide-react";
+import type { ContractPotState, PotProgress } from "@/lib/bch";
+import type { BroadcastReceipt } from "@/services/client/billNetworkService";
 import type { CompiledBillRoomState } from "../_utils/billRoomHelpers";
 import {
   formatBchAmount,
   formatNetworkBadge,
-  formatSatsCount,
   formatUsdApprox,
   truncateMiddle,
 } from "../_utils/billRoomHelpers";
+import { PotProgressBarSection } from "./PotProgressBarSection";
 
 interface BillReceiptHeaderProps {
   state: CompiledBillRoomState;
+  potProgress: PotProgress;
+  potState: ContractPotState | null;
+  priceUsd: number;
+  broadcastReceipt: BroadcastReceipt | null;
+  isRefreshing: boolean;
+  networkError: string | null;
+  lastSyncedAt: number | null;
+  onRefreshPot: () => void;
   onCopyBillLink: () => void;
   onOpenShareQr: () => void;
   onCopyPotAddress: () => void;
@@ -17,21 +35,52 @@ interface BillReceiptHeaderProps {
 
 export function BillReceiptHeader({
   state,
+  potProgress,
+  potState,
+  priceUsd,
+  broadcastReceipt,
+  isRefreshing,
+  networkError,
+  lastSyncedAt,
+  onRefreshPot,
   onCopyBillLink,
   onOpenShareQr,
   onCopyPotAddress,
 }: BillReceiptHeaderProps) {
-  const { bill, contract, potProgress } = state;
-  const statusLabel = potProgress.isReadyToSettle
-    ? "Ready to Settle"
-    : "Waiting for Shares";
-  const mascotSrc = potProgress.isReadyToSettle
-    ? "/mascots/happy.png"
-    : "/mascots/step-pay.png";
-  const mascotAlt = potProgress.isReadyToSettle
-    ? "CakeSplit mascot celebrating a funded table pot"
-    : "CakeSplit mascot waiting for friends to chip in";
-  const clampedPercent = Math.max(0, Math.min(100, potProgress.percent));
+  const { bill, contract } = state;
+  const isSettled = broadcastReceipt?.kind === "settled";
+  const isCancelled = broadcastReceipt?.kind === "cancelled";
+
+  const statusLabel = isSettled
+    ? "Settled to Cashier"
+    : isCancelled
+      ? "Refunded"
+      : potProgress.isReadyToSettle
+        ? "Ready to Settle"
+        : "Waiting for Shares";
+
+  const mascotSrc = isSettled
+    ? "/mascots/party.png"
+    : isCancelled
+      ? "/mascots/step-success.png"
+      : potProgress.isReadyToSettle
+        ? "/mascots/happy.png"
+        : "/mascots/step-pay.png";
+
+  const mascotAlt = isSettled
+    ? "CakeSplit mascot celebrating a paid table check"
+    : isCancelled
+      ? "CakeSplit mascot confirming table refund"
+      : potProgress.isReadyToSettle
+        ? "CakeSplit mascot celebrating a funded table pot"
+        : "CakeSplit mascot waiting for friends to chip in";
+
+  const hasUnconfirmed = Boolean(potState && potState.unconfirmedSatoshis > 0n);
+  const hasConfirmedOnly = Boolean(
+    potState &&
+      potState.confirmedSatoshis > 0n &&
+      potState.unconfirmedSatoshis === 0n,
+  );
 
   return (
     <div className="ink-card overflow-hidden rounded-3xl">
@@ -49,18 +98,32 @@ export function BillReceiptHeader({
 
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[11px] font-bold ${
-                  potProgress.isReadyToSettle
+                  isSettled || potProgress.isReadyToSettle
                     ? "border-[#18181B] bg-[#18181B] text-[#FAF9F6]"
                     : "border-[#18181B]/25 bg-[#FFFFFF] text-[#111111]"
                 }`}
               >
-                {potProgress.isReadyToSettle ? (
+                {isCancelled ? (
+                  <RotateCcw className="size-3.5" aria-hidden="true" />
+                ) : isSettled || potProgress.isReadyToSettle ? (
                   <CheckCircle2 className="size-3.5" aria-hidden="true" />
                 ) : (
                   <Clock className="size-3.5" aria-hidden="true" />
                 )}
                 <span>{statusLabel}</span>
               </span>
+
+              {!broadcastReceipt && hasUnconfirmed ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-[#18181B]/40 bg-[#FFFFFF] px-2.5 py-1 font-mono text-[10px] font-bold text-[#111111]">
+                  0-conf Mempool
+                </span>
+              ) : null}
+
+              {!broadcastReceipt && hasConfirmedOnly ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#18181B]/25 bg-[#FFFFFF] px-2.5 py-1 font-mono text-[10px] font-bold text-[#111111]">
+                  Confirmed On-Chain
+                </span>
+              ) : null}
             </div>
 
             <div>
@@ -72,8 +135,8 @@ export function BillReceiptHeader({
                 <span className="font-mono font-semibold text-[#111111]">
                   {formatBchAmount(contract.potGoalSatoshis)} BCH
                 </span>{" "}
-                ({formatUsdApprox(contract.potGoalSatoshis)}) into one shared
-                table pot.
+                ({formatUsdApprox(contract.potGoalSatoshis, priceUsd)}) into one
+                shared table pot.
               </p>
             </div>
           </div>
@@ -93,51 +156,15 @@ export function BillReceiptHeader({
       </div>
 
       <div className="space-y-5 p-5 sm:p-7">
-        <div className="space-y-2.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-mono text-xs font-bold tracking-wider text-[#18181B] uppercase">
-              Shared Pot Progress
-            </span>
-            <div className="flex items-baseline gap-2 font-mono text-xs sm:text-sm">
-              <span className="font-extrabold text-[#111111]">
-                {formatSatsCount(potProgress.collectedSatoshis)} /{" "}
-                {formatSatsCount(potProgress.potGoalSatoshis)} sats
-              </span>
-              <span className="text-[#A1A1AA]">/</span>
-              <span className="font-bold text-[#52525B]">
-                {clampedPercent}%
-              </span>
-            </div>
-          </div>
-
-          <div
-            role="progressbar"
-            aria-label="Shared pot funding progress"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={clampedPercent}
-            className="relative h-4 w-full overflow-hidden rounded-full border-[1.5px] border-[#18181B] bg-[#FAF9F6]"
-          >
-            <div
-              className="h-full rounded-full bg-[#18181B] transition-all duration-500"
-              style={{
-                width: `${clampedPercent}%`,
-                backgroundImage:
-                  "repeating-linear-gradient(-45deg, rgba(250,249,246,0.14) 0px, rgba(250,249,246,0.14) 6px, transparent 6px, transparent 12px)",
-              }}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-[#71717A]">
-            <span>
-              Collected: {formatBchAmount(potProgress.collectedSatoshis)} BCH
-            </span>
-            <span>
-              Remaining: {formatBchAmount(potProgress.remainingSatoshis)} BCH (
-              {formatSatsCount(potProgress.remainingSatoshis)} sats)
-            </span>
-          </div>
-        </div>
+        <PotProgressBarSection
+          potProgress={potProgress}
+          priceUsd={priceUsd}
+          isSettled={isSettled}
+          isRefreshing={isRefreshing}
+          networkError={networkError}
+          lastSyncedAt={lastSyncedAt}
+          onRefreshPot={onRefreshPot}
+        />
 
         <div className="receipt-perforation flex flex-wrap items-center justify-between gap-3 pt-4">
           <div className="flex flex-wrap items-center gap-2.5">
