@@ -13,6 +13,18 @@ Any new session must treat these three combined targets as the active scope:
 4. **Automatic Side Pools:** **Community Choice (`$750 PUSD`)** and **TokenHunt (`$250 PUSD`)** once Mainnet/Media eligibility is met.
 - *Queue note:* Missed Roll Call puts Mainnet/Media in the low-priority queue (escape via compelling social traction or joining a Roll Call team); Build with XO is judged independently across 10 slots.
 
+## Active Project: CakeSplit
+
+- **Concept:** Trustless on-chain group split-bill dApp (`CakeSplit`) backed by a 113-byte P2SH32 **Bill Pot Covenant** XO Template (`openBill`, `chipIn`, `settleBill`, `cancelBill`, zero timelock, supports both XO follow-up invitations and universal any-wallet BIP21 QR scan sweeping).
+- **XO Template ID:** `332154d13ae190aff7da5a601aea3f94b8547393ce509c31b01cfde078163e4a` (`@xo-cash/engine@0.1.1-next.18230317763`, artifacts in `artifacts/xo/`, verified on `https://blaze.xo.cash/` — screenshot in `docs/debug-tool/blaze-xo-openBill-inspect.png`).
+- **Stack:** Next.js `16.4.6` (ESM + Turbopack), React `19.3`, Tailwind CSS v4, `shadcn/ui`, TanStack Query v5, Zod v4, Zustand v5, `@xo-cash/*`, `@bitauth/libauth` v3, `@electrum-cash/network` v4, Vitest v5 (`29/29` passing).
+- **Mainnet Wallet (Public):** BCH `bitcoincash:qr4jg99w7eeupyd9hch370t3ffkd8kmmfszwxk6ml2` | CashTokens (`EMBER2026` banner) `bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe`.
+- **Current Milestone Status:**
+  - ✅ Scaffold + Contract + Utilities + Signed XO Invitations + `29/29` tests (`#2` closed)
+  - ✅ `blaze.xo.cash` live `Import Template` + `Join Invitation` verified (`docs/debug-tool/blaze-xo-openBill-inspect.png`)
+  - ⏳ `#3` UI pages (`/` Create Bill, `/bill` Live Pot + QR + XO Inspector, Mainnet Track Top Banner) — awaiting user's shadcn design reference
+  - ⏳ `#4` Live Chipnet/Mainnet execution proof, deploy, Widget Factory slides, human-written ~500-word XO feedback, Media Track asset, make repo Public, Telegram `@bchblaze` & DoraHacks submit
+
 ## Agent skills
 
 ### Issue tracker
