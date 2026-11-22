@@ -3,6 +3,7 @@ import {
   satsToBch,
   type BchNetwork,
 } from "@/lib/bch/address";
+import type { ShareableBillPayload } from "@/lib/bch/bill-link";
 import { createSplitBillSchema } from "@/lib/schemas/bill";
 import type { SplitParticipantDraft } from "@/store/app-store";
 import {
@@ -124,15 +125,6 @@ export function computeBillSummary(
 }
 
 /**
- * Formats a CashAddress cleanly for compact confirmation summaries.
- */
-export function truncateCashAddress(address: string): string {
-  const trimmed = address.trim();
-  if (trimmed.length <= 28) return trimmed;
-  return `${trimmed.slice(0, 18)}...${trimmed.slice(-8)}`;
-}
-
-/**
  * Quick inline indicator for whether the cashier CashAddress matches the active network.
  */
 export function isMerchantAddressValidForNetwork(
@@ -140,6 +132,30 @@ export function isMerchantAddressValidForNetwork(
   network: BchNetwork,
 ): boolean {
   return isValidCashAddress(address, network);
+}
+
+/**
+ * Builds a canonical `ShareableBillPayload` from a validated draft snapshot.
+ */
+export function buildShareablePayloadFromSnapshot(params: {
+  snapshot: ValidatedBillSnapshot;
+  organizerPublicKeyHex: string;
+  billNonceHex: string;
+  createdAt: number;
+}): ShareableBillPayload {
+  const { snapshot, organizerPublicKeyHex, billNonceHex, createdAt } = params;
+  return {
+    v: 1,
+    network: snapshot.network,
+    title: snapshot.title,
+    billNonceHex,
+    merchantAddress: snapshot.merchantAddress,
+    organizerPublicKeyHex,
+    merchantPayoutSatoshis: snapshot.billTotalSats,
+    settlementFeeSatoshis: snapshot.networkFeeSats,
+    participants: snapshot.participants,
+    createdAt,
+  };
 }
 
 /**

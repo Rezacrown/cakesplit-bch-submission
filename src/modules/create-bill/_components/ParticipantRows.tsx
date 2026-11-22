@@ -1,4 +1,4 @@
-import { Plus, Trash2, Users } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { SplitParticipantDraft } from "@/store/app-store";
 import { MAX_PARTICIPANTS, type SplitMode } from "../constants";
@@ -30,26 +30,26 @@ export function ParticipantRows({
   onAmountChange,
 }: ParticipantRowsProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide text-[#161616] uppercase">
-          <Users className="size-3.5" aria-hidden="true" />
+        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-wider text-[#18181B] uppercase">
+          <Users className="size-3.5 text-[#52525B]" aria-hidden="true" />
           People at the table
         </span>
-        <span className="font-mono text-xs font-semibold text-[#5B5347]">
+        <span className="font-mono text-xs font-semibold text-[#71717A]">
           {participants.length} / {MAX_PARTICIPANTS} seats
         </span>
       </div>
 
-      <div className="max-h-60 space-y-2 overflow-y-auto pr-0.5">
+      <div className="max-h-64 space-y-2.5 overflow-y-auto pr-0.5">
         {participants.map((person, index) => {
           const rowError = participantErrors?.[person.id];
           return (
-            <div key={person.id} className="space-y-1">
+            <div key={person.id} className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <span
                   aria-hidden="true"
-                  className="flex size-7 shrink-0 items-center justify-center rounded-lg border-2 border-[#161616] bg-[#FFD166] font-mono text-xs font-bold text-[#161616]"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[#18181B]/20 bg-[#F4F4F5] font-mono text-xs font-bold text-[#111111]"
                 >
                   {index + 1}
                 </span>
@@ -59,17 +59,17 @@ export function ParticipantRows({
                   placeholder={`Friend ${index + 1}`}
                   value={person.label}
                   onChange={(e) => onLabelChange(person.id, e.target.value)}
-                  className="h-9 flex-1 rounded-lg border-2 border-[#161616] bg-[#FAF6EE] px-2.5 text-sm font-medium text-[#161616] placeholder:text-[#5B5347]/60 focus-visible:bg-[#FFFDF9]"
+                  className="h-10 flex-1 rounded-xl border-[1.5px] border-[#18181B]/20 bg-[#FAF9F6] px-3 text-sm font-medium text-[#111111] placeholder:text-[#71717A]/70 focus-visible:border-[#18181B] focus-visible:bg-[#FFFFFF]"
                 />
 
                 {splitMode === "equal" ? (
-                  <div className="flex h-9 min-w-[116px] flex-col items-end justify-center rounded-lg border-2 border-dashed border-[#161616]/35 bg-[#FAF6EE] px-2.5 text-right">
-                    <span className="font-mono text-xs font-bold text-[#161616]">
+                  <div className="flex h-10 min-w-[120px] flex-col items-end justify-center rounded-xl border border-dashed border-[#18181B]/25 bg-[#F4F4F5]/75 px-3 text-right">
+                    <span className="font-mono text-xs font-bold text-[#111111]">
                       {person.shareSatoshis > 0
                         ? `${formatSatsAsBch(person.shareSatoshis)} BCH`
                         : "0 BCH"}
                     </span>
-                    <span className="font-mono text-[10px] text-[#5B5347]">
+                    <span className="font-mono text-[10px] text-[#71717A]">
                       {formatSatsAsUsdApprox(person.shareSatoshis)}
                     </span>
                   </div>
@@ -83,9 +83,9 @@ export function ParticipantRows({
                       onChange={(e) =>
                         onAmountChange(person.id, e.target.value)
                       }
-                      className="h-9 rounded-lg border-2 border-[#161616] bg-[#FAF6EE] pr-11 pl-2.5 font-mono text-sm font-semibold text-[#161616] placeholder:text-[#5B5347]/55 focus-visible:bg-[#FFFDF9]"
+                      className="h-10 rounded-xl border-[1.5px] border-[#18181B]/20 bg-[#FAF9F6] pr-11 pl-3 font-mono text-sm font-semibold text-[#111111] placeholder:text-[#71717A]/60 focus-visible:border-[#18181B] focus-visible:bg-[#FFFFFF]"
                     />
-                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 font-mono text-[11px] font-bold text-[#5B5347]">
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-[11px] font-bold text-[#71717A]">
                       BCH
                     </span>
                   </div>
@@ -96,15 +96,16 @@ export function ParticipantRows({
                   disabled={!canRemove}
                   onClick={() => onRemove(person.id)}
                   aria-label={`Remove ${person.label || `person ${index + 1}`}`}
-                  className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-[#161616] bg-[#FFFDF9] text-[#161616] transition-colors hover:bg-[#E63946] hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[#E4E4E7] bg-[#FFFFFF] text-[#52525B] transition-colors hover:border-[#18181B] hover:bg-[#18181B] hover:text-[#FAF9F6] disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
                 </button>
               </div>
 
               {rowError ? (
-                <p className="pl-9 text-xs font-semibold text-[#E63946]">
-                  {rowError}
+                <p className="inline-flex items-center gap-1.5 pl-10 text-xs font-semibold text-[#18181B]">
+                  <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+                  <span>{rowError}</span>
                 </p>
               ) : null}
             </div>
@@ -116,7 +117,7 @@ export function ParticipantRows({
         type="button"
         disabled={!canAdd}
         onClick={onAdd}
-        className="retro-btn-sm inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#FAF6EE] px-3 py-2 text-xs font-bold text-[#161616] hover:bg-[#FFD166]/45 disabled:cursor-not-allowed disabled:opacity-45"
+        className="ink-pill-secondary inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45"
       >
         <Plus className="size-3.5" aria-hidden="true" />
         <span>

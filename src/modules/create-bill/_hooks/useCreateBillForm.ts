@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  encodeShareableBill,
+  generateRandomBillNonceHex,
+  loadOrCreateOrganizerKey,
+} from "@/lib/bch";
 import { useAppStore, type SplitParticipantDraft } from "@/store/app-store";
 import {
   MAX_PARTICIPANTS,
@@ -9,6 +15,7 @@ import {
   type SplitMode,
 } from "../constants";
 import {
+  buildShareablePayloadFromSnapshot,
   computeBillSummary,
   computeEqualSplitSats,
   formatSatsAsBch,
@@ -16,7 +23,6 @@ import {
   parseBchInputToSats,
   validateBillDraft,
   type CreateBillFieldErrors,
-  type ValidatedBillSnapshot,
 } from "../_utils/billFormMath";
 
 const DECIMAL_INPUT_PATTERN = /^\d*(\.\d{0,8})?$/;
@@ -33,6 +39,7 @@ function buildCustomInputMap(
 }
 
 export function useCreateBillForm() {
+  const router = useRouter();
   const network = useAppStore((s) => s.network);
   const title = useAppStore((s) => s.title);
   const merchantAddress = useAppStore((s) => s.merchantAddress);
@@ -40,16 +47,17 @@ export function useCreateBillForm() {
   const setTitle = useAppStore((s) => s.setTitle);
   const setMerchantAddress = useAppStore((s) => s.setMerchantAddress);
   const setParticipants = useAppStore((s) => s.setParticipants);
-  const resetDraft = useAppStore((s) => s.resetDraft);
 
   const [splitMode, setSplitMode] = useState<SplitMode>("equal");
-  const [totalBillInput, setTotalBillInput] = useState("");
+  const [totalBillInput, setTotalBillInput] = useState(() => {
+    const initialTotal = computeBillSummary(participants).billTotalSats;
+    return initialTotal > 0 ? formatSatsAsBch(initialTotal) : "";
+  });
   const [customInputs, setCustomInputs] = useState<Record<string, string>>(() =>
     buildCustomInputMap(participants),
   );
   const [fieldErrors, setFieldErrors] = useState<CreateBillFieldErrors>({});
-  const [readySnapshot, setReadySnapshot] =
-    useState<ValidatedBillSnapshot | null>(null);
+  const [isOpening, setIsOpening] = useState(false);
 
   const summary = useMemo(
     () => computeBillSummary(participants),
@@ -61,9 +69,10 @@ export function useCreateBillForm() {
     [merchantAddress, network],
   );
 
-  const clearFeedback = () => {
-    setFieldErrors({});
-    setReadySnapshot(null);
+  const clearErrors = () => {
+    if (Object.keys(fieldErrors).length > 0) {
+      setFieldErrors({});
+    }
   };
 
   const applyEqualShares = (
@@ -80,12 +89,12 @@ export function useCreateBillForm() {
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    if (fieldErrors.title || readySnapshot) clearFeedback();
+    if (fieldErrors.title) clearErrors();
   };
 
   const handleMerchantAddressChange = (value: string) => {
     setMerchantAddress(value);
-    if (fieldErrors.merchantAddress || readySnapshot) clearFeedback();
+    if (fieldErrors.merchantAddress) clearErrors();
   };
 
   const handleTotalBillChange = (value: string) => {
@@ -93,13 +102,13 @@ export function useCreateBillForm() {
     if (!DECIMAL_INPUT_PATTERN.test(normalized)) return;
     setTotalBillInput(normalized);
     setParticipants(applyEqualShares(participants, normalized));
-    if (fieldErrors.amount || readySnapshot) clearFeedback();
+    if (fieldErrors.amount) clearErrors();
   };
 
   const handleSplitModeChange = (nextMode: SplitMode) => {
     if (nextMode === splitMode) return;
     setSplitMode(nextMode);
-    clearFeedback();
+    clearErrors();
 
     if (nextMode === "equal") {
       const currentTotalSats = computeBillSummary(participants).billTotalSats;
@@ -127,7 +136,7 @@ export function useCreateBillForm() {
       setParticipants(appended);
       setCustomInputs((prev) => ({ ...prev, [newId]: "" }));
     }
-    clearFeedback();
+    clearErrors();
   };
 
   const handleRemoveParticipant = (id: string) => {
@@ -144,14 +153,14 @@ export function useCreateBillForm() {
         return next;
       });
     }
-    clearFeedback();
+    clearErrors();
   };
 
   const handleParticipantLabelChange = (id: string, label: string) => {
     setParticipants(
       participants.map((p) => (p.id === id ? { ...p, label } : p)),
     );
-    if (fieldErrors.participants?.[id] || readySnapshot) clearFeedback();
+    if (fieldErrors.participants?.[id]) clearErrors();
   };
 
   const handleParticipantAmountChange = (id: string, raw: string) => {
@@ -164,8 +173,8 @@ export function useCreateBillForm() {
         p.id === id ? { ...p, shareSatoshis: sats } : p,
       ),
     );
-    if (fieldErrors.amount || fieldErrors.participants?.[id] || readySnapshot) {
-      clearFeedback();
+    if (fieldErrors.amount || fieldErrors.participants?.[id]) {
+      clearErrors();
     }
   };
 
@@ -181,25 +190,35 @@ export function useCreateBillForm() {
 
     if (!result.ok) {
       setFieldErrors(result.fieldErrors);
-      setReadySnapshot(null);
       toast.error(result.firstMessage);
       return;
     }
 
-    setFieldErrors({});
-    setReadySnapshot(result.snapshot);
-    toast.success(
-      `${result.snapshot.title} is ready — ${formatSatsAsBch(result.snapshot.sharedPotTargetSats)} BCH table pot locked in.`,
-    );
-  };
+    try {
+      setIsOpening(true);
+      setFieldErrors({});
+      const organizerKey = loadOrCreateOrganizerKey(result.snapshot.network);
+      const billNonceHex = generateRandomBillNonceHex(8);
+      const payload = buildShareablePayloadFromSnapshot({
+        snapshot: result.snapshot,
+        organizerPublicKeyHex: organizerKey.publicKeyHex,
+        billNonceHex,
+        createdAt: Date.now(),
+      });
+      const token = encodeShareableBill(payload);
 
-  const handleReset = () => {
-    resetDraft();
-    setSplitMode("equal");
-    setTotalBillInput("");
-    setCustomInputs({});
-    setFieldErrors({});
-    setReadySnapshot(null);
+      toast.success(
+        `${result.snapshot.title} is ready — opening your table check.`,
+      );
+      router.push(`/bill?d=${token}`);
+    } catch (error) {
+      setIsOpening(false);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not create the table check. Please check your inputs.",
+      );
+    }
   };
 
   return {
@@ -213,7 +232,7 @@ export function useCreateBillForm() {
     summary,
     isAddressValid,
     fieldErrors,
-    readySnapshot,
+    isOpening,
     canAddParticipant: participants.length < MAX_PARTICIPANTS,
     canRemoveParticipant: participants.length > MIN_PARTICIPANTS,
     onTitleChange: handleTitleChange,
@@ -225,7 +244,5 @@ export function useCreateBillForm() {
     onParticipantLabelChange: handleParticipantLabelChange,
     onParticipantAmountChange: handleParticipantAmountChange,
     onSubmit: handleSubmit,
-    onEditSummary: () => setReadySnapshot(null),
-    onReset: handleReset,
   };
 }
