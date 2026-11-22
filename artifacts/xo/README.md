@@ -14,6 +14,7 @@ Generated reproducibly via `pnpm xo:artifacts` for inspection on **[https://blaz
 3. `invitation-chipIn.json` — Signed `chipIn` follow-up action invitation (BCH 2026 VM verified).
 4. `invitation-settleBill.json` — Signed `settleBill` permissionless follow-up invitation (0 signatures, BCH 2026 VM verified).
 5. `invitation-cancelBill.json` — Signed `cancelBill` organizer escape-hatch follow-up invitation (only valid before pot reaches goal, BCH 2026 VM verified).
+6. **`mainnet-settleBill-invitation.json`** — Live **BCH Mainnet** Schnorr-signed broadcasted `settleBill` XO Invitation referencing real Mainnet tx [`8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff`](https://explorer.bch.ninja/tx/8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff) (`10,000 sats` net to cashier, `500 sats` fee).
 
 ## How to Inspect on blaze.xo.cash
 1. Open **https://blaze.xo.cash/**.

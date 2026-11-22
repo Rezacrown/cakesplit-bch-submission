@@ -189,4 +189,24 @@ describe("CakeSplit signed XO Invitations (@xo-cash/crypto + @xo-cash/utils)", (
     expect(check.valid).toBe(false);
     expect(check.error).toContain("Invalid Schnorr signature");
   });
+
+  it("cryptographically verifies the archived live BCH Mainnet broadcasted settleBill XO invitation", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const raw = fs
+      .readFileSync(
+        path.resolve("artifacts/xo/mainnet-settleBill-invitation.json"),
+        "utf8",
+      )
+      .trim();
+
+    const check = verifyCakeSplitInvitation(raw);
+    expect(check.valid).toBe(true);
+    expect(check.invitation?.commits).toHaveLength(1);
+    expect(check.invitation?.templateIdentifier).toBe(CAKESPLIT_TEMPLATE_ID);
+    expect(check.invitation?.actionIdentifier).toBe("settleBill");
+    expect(
+      check.invitation?.result?.transactions?.settleBillTransaction?.transactionHash,
+    ).toBe("8729bb2c7cf880a7496e662233aa21612dabafefe20772f82c8ae39aecefb6ff");
+  });
 });

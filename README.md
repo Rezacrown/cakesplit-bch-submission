@@ -16,7 +16,7 @@ Trustless, non-custodial group bill splitting built natively on **Bitcoin Cash M
     <img src="https://img.shields.io/badge/Build_with_XO-113--Byte_P2SH32-18181B?style=for-the-badge" alt="Build with XO" />
   </a>
   <img src="https://img.shields.io/badge/Network-BCH_Mainnet-0AC18E?style=for-the-badge" alt="Bitcoin Cash Mainnet" />
-  <img src="https://img.shields.io/badge/Tests-37%2F37_Passing-2563EB?style=for-the-badge" alt="37/37 Tests Passing" />
+  <img src="https://img.shields.io/badge/Tests-39%2F39_Passing-2563EB?style=for-the-badge" alt="39/39 Tests Passing" />
   <img src="https://img.shields.io/badge/License-MIT-52525B?style=for-the-badge" alt="MIT License" />
 </p>
 
@@ -131,7 +131,8 @@ Reproducible XO Template and Schnorr-signed Invitation artifacts live in [`artif
 
 1. Open **[https://blaze.xo.cash/](https://blaze.xo.cash/)**.
 2. Click **Import Template** and paste [`artifacts/xo/cakesplit-template.json`](artifacts/xo/cakesplit-template.json).
-3. Click **Join Invitation** and paste any of the 4 signed invitations:
+3. Click **Join Invitation** and paste any of the signed invitations (including the real broadcasted Mainnet settlement):
+   - **[`artifacts/xo/mainnet-settleBill-invitation.json`](artifacts/xo/mainnet-settleBill-invitation.json)** *(Live BCH Mainnet broadcasted `settleBill` receipt — `txid 8729bb2c7c...ecefb6ff`)*
    - [`artifacts/xo/invitation-openBill.json`](artifacts/xo/invitation-openBill.json)
    - [`artifacts/xo/invitation-chipIn.json`](artifacts/xo/invitation-chipIn.json)
    - [`artifacts/xo/invitation-settleBill.json`](artifacts/xo/invitation-settleBill.json)
@@ -143,7 +144,7 @@ Reproducible XO Template and Schnorr-signed Invitation artifacts live in [`artif
   <sub>CakeSplit XO Template and Schnorr-signed <code>openBill</code> invitation inspected directly inside <code>blaze.xo.cash</code>.</sub>
 </div>
 
-Re-generate all XO artifacts and verify all 34 tests (including BCH 2026 VM attack vectors and CashASM parity) locally:
+Re-generate all XO artifacts and verify all 39 tests (including BCH 2026 VM attack vectors, live Mainnet XO signature verification, history classification, and CashASM parity) locally:
 
 ```bash
 pnpm xo:artifacts
