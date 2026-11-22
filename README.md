@@ -76,7 +76,10 @@ When friends eat out or share a group bill, someone always has to front the enti
 
 ## Verified BCH Mainnet Execution Proof
 
-CakeSplit has executed a real, end-to-end multi-participant split bill and permissionless 0-signature P2SH32 covenant settlement live on **Bitcoin Cash Mainnet**:
+CakeSplit has executed a real, end-to-end multi-participant split bill and permissionless 0-signature P2SH32 covenant settlement live on **Bitcoin Cash Mainnet** (contract pot `bitcoincash:pw9ttww87k3v9rq6sqcgd5hfv86mlh0cnnwkzypwujel8ykhg2h5g0k0w8ev2`):
+
+> **No wallet on hand? Inspect the live settled Mainnet receipt in 1 click:**
+> **[Open Live Settled Table Check on CakeSplit](https://cakesplit-bch.vercel.app/bill?d=AgAIqvqda86L5sQDMiNtvGfXsQjDolmUSH41V4V8O2sWpFU9In0p3GF41V4U6yQUrvZzwJGlvi8fPXFKbNPbe0yQTvQD157ZlKA0CXRlc3QgYmlsbAIDWW91iCcIRnJpZW5kIDKIJw)** — fetches live Mainnet history directly from Fulcrum WSS, restores the settled receipt + 3 on-chain transactions, and lets you copy the Schnorr-signed broadcasted XO Invitation JSON.
 
 | Lifecycle Step | Amount | Mainnet Transaction ID | Explorer |
 | :--- | :--- | :--- | :--- |

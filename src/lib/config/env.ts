@@ -8,6 +8,8 @@ const DEFAULT_APP_URL = "https://cakesplit-bch.vercel.app";
 const DEFAULT_APP_NAME = "CakeSplit";
 const DEFAULT_GITHUB_REPO_URL =
   "https://github.com/Rezacrown/cakesplit-bch-submission";
+const DEFAULT_SLIDES_URL =
+  "https://docs.google.com/presentation/d/1MWgxqhW43VwhE9tCDykVvCvQUX3ljzvHgSwMqDwQqhs/edit?usp=sharing";
 const DEFAULT_EMBER_ADDRESS =
   "bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe";
 const DEFAULT_XO_DEBUG_TOOL_URL = "https://blaze.xo.cash/";
@@ -75,7 +77,7 @@ export const appConfig = {
     cleanEnvString(process.env.NEXT_PUBLIC_GITHUB_REPO_URL),
     DEFAULT_GITHUB_REPO_URL,
   ),
-  slidesUrl: configuredSlidesUrl,
+  slidesUrl: configuredSlidesUrl || DEFAULT_SLIDES_URL,
   emberAddress:
     cleanEnvString(process.env.NEXT_PUBLIC_EMBER_ADDRESS) ||
     DEFAULT_EMBER_ADDRESS,
