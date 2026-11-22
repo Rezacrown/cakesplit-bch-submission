@@ -158,9 +158,18 @@ export function SettlementConsoleCard({
                     </>
                   )}
                 </button>
-                <p className="text-center text-[11px] leading-relaxed text-[#71717A]">
-                  {SETTLEMENT_CONSOLE_COPY.settleCaption}
-                </p>
+                {potProgress.isReadyToSettle &&
+                (potState?.unconfirmedSatoshis ?? 0n) > 0n ? (
+                  <p className="rounded-xl border border-[#18181B]/15 bg-[#F4F4F5] px-3 py-2 text-center text-[11px] leading-relaxed text-[#3F3F46]">
+                    A deposit is still in the 0-conf mempool. You can settle right
+                    now—if a node is still syncing the mempool, wait a few seconds
+                    and tap again.
+                  </p>
+                ) : (
+                  <p className="text-center text-[11px] leading-relaxed text-[#71717A]">
+                    {SETTLEMENT_CONSOLE_COPY.settleCaption}
+                  </p>
+                )}
               </div>
 
               <div className="receipt-perforation space-y-2 pt-4">

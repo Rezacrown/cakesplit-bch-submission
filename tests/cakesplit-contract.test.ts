@@ -275,4 +275,32 @@ describe("CakeSplit XO Template & BCH 2026 VM Covenant", () => {
     expect(bundle.actionIdentifier).toBe("settleBill");
     expect(bundle.contractAddress).toBe(contract.contractAddress);
   });
+
+  it("serializes asymmetric display-order txids into valid wire little-endian outpoint hashes", () => {
+    const asymmetricTxid =
+      "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20";
+    const expectedWireHex =
+      "201f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201";
+
+    const builtSettle = buildSettleBillTransaction({
+      contract,
+      potUtxos: [{ txid: asymmetricTxid, vout: 0, satoshis: 4_000n }],
+    });
+    // Raw BCH tx layout: 4-byte version (8 hex) + 1-byte input count (2 hex) + 32-byte outpoint hash (64 hex)
+    expect(builtSettle.rawTxHex.slice(10, 74)).toBe(expectedWireHex);
+    expect(
+      verifyTransactionWithBchVm(builtSettle.transaction, builtSettle.sourceOutputs),
+    ).toEqual({ ok: true });
+
+    const builtCancel = buildCancelBillTransaction({
+      contract,
+      potUtxos: [{ txid: asymmetricTxid, vout: 0, satoshis: 2_500n }],
+      organizerPrivateKey: hexToBin(organizer.privateKeyHex),
+      refundAddress: organizer.address,
+    });
+    expect(builtCancel.rawTxHex.slice(10, 74)).toBe(expectedWireHex);
+    expect(
+      verifyTransactionWithBchVm(builtCancel.transaction, builtCancel.sourceOutputs),
+    ).toEqual({ ok: true });
+  });
 });

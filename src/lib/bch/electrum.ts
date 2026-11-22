@@ -180,6 +180,13 @@ export async function fetchContractPotState(
   };
 }
 
+class BroadcastRejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BroadcastRejectedError";
+  }
+}
+
 /**
  * Broadcasts a raw signed/permissionless BCH transaction hex to Mainnet or Chipnet via Fulcrum.
  * Returns the broadcast `txid`.
@@ -189,21 +196,65 @@ export async function broadcastRawTransaction(
   network: BchNetwork,
   customServers?: ElectrumServerEndpoint[],
 ): Promise<string> {
-  return withElectrumClient(
-    network,
-    async (client) => {
+  const servers = customServers ?? DEFAULT_ELECTRUM_SERVERS[network];
+  let lastBroadcastRejection: string | null = null;
+  let lastConnectionError: unknown;
+
+  for (const server of servers) {
+    const client = new ElectrumClient<ElectrumClientEvents>(
+      "CakeSplit",
+      "1.5",
+      server.host,
+      { port: server.port, encrypted: true, timeoutInMilliSeconds: 10_000 },
+    );
+    try {
+      await client.connect();
       const response = await client.request(
         "blockchain.transaction.broadcast",
         rawTxHex.trim(),
       );
       if (response instanceof Error) {
-        throw new Error(`Broadcast rejected: ${response.message}`);
+        throw new BroadcastRejectedError(response.message);
       }
       if (typeof response !== "string" || response.length !== 64) {
-        throw new Error(`Unexpected broadcast response: ${JSON.stringify(response)}`);
+        throw new BroadcastRejectedError(
+          `Unexpected broadcast response: ${JSON.stringify(response)}`,
+        );
       }
       return response;
-    },
-    customServers,
+    } catch (error) {
+      if (error instanceof BroadcastRejectedError) {
+        lastBroadcastRejection = error.message;
+      } else {
+        lastConnectionError = error;
+      }
+    } finally {
+      try {
+        await client.disconnect();
+      } catch {
+        // Ignore disconnect errors on failed connections.
+      }
+    }
+  }
+
+  if (lastBroadcastRejection) {
+    const lower = lastBroadcastRejection.toLowerCase();
+    if (
+      lower.includes("missing inputs") ||
+      lower.includes("bad-txns-inputs-missingorspent")
+    ) {
+      throw new Error(
+        "A recent 0-conf deposit is still syncing across Bitcoin Cash nodes (or was already spent). Please wait 5-10 seconds, tap Refresh, and try again.",
+      );
+    }
+    throw new Error(`Transaction rejected by Bitcoin Cash network: ${lastBroadcastRejection}`);
+  }
+
+  throw new Error(
+    `Failed to reach any ${network} Electrum/Fulcrum server: ${
+      lastConnectionError instanceof Error
+        ? lastConnectionError.message
+        : String(lastConnectionError)
+    }`,
   );
 }

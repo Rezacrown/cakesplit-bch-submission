@@ -89,12 +89,20 @@ function encodeVmIntPush(value: bigint): Uint8Array {
   return encodeDataPush(bigIntToVmNumber(value));
 }
 
+/**
+ * Converts a 64-char display-order (big-endian) txid hex string into the 32-byte
+ * `outpointTransactionHash` expected by `@bitauth/libauth`.
+ *
+ * Note: `libauth`'s `encodeTransactionBch` and `generateSigningSerializationBch`
+ * automatically reverse `outpointTransactionHash` to Bitcoin wire (little-endian)
+ * byte order—so we must NOT reverse it here.
+ */
 function txidToOutpointHash(txidHex: string): Uint8Array {
   const bytes = hexToBin(txidHex.trim());
   if (bytes.length !== 32) {
     throw new Error(`Invalid txid hex length: expected 32 bytes, got ${bytes.length}`);
   }
-  return new Uint8Array(bytes).reverse();
+  return bytes;
 }
 
 export function computeTxidFromRawBytes(rawTxBytes: Uint8Array): string {
