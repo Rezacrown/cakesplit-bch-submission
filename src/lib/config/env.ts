@@ -7,7 +7,7 @@ export interface MainnetElectrumConfig {
 const DEFAULT_APP_URL = "https://cakesplit-bch.vercel.app";
 const DEFAULT_APP_NAME = "CakeSplit";
 const DEFAULT_GITHUB_REPO_URL =
-  "https://github.com/Rezacrown/bch-blaze-hackathon";
+  "https://github.com/Rezacrown/cakesplit-bch-submission";
 const DEFAULT_EMBER_ADDRESS =
   "bitcoincash:zr4jg99w7eeupyd9hch370t3ffkd8kmmfs9y4g5aqe";
 const DEFAULT_XO_DEBUG_TOOL_URL = "https://blaze.xo.cash/";

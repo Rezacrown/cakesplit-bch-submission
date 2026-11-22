@@ -3,7 +3,7 @@
 Generated reproducibly via `pnpm xo:artifacts` for inspection on **[https://blaze.xo.cash/](https://blaze.xo.cash/)**.
 
 ## Summary
-- **Template Identifier:** `332154d13ae190aff7da5a601aea3f94b8547393ce509c31b01cfde078163e4a`
+- **Template Identifier:** `c52aac6dcb3a27a8d2f915f1c20fbf806548041e2ea88f6abc6fcca9cd8f4755`
 - **Sample Chipnet Contract Address (P2SH32):** `bchtest:pw6u9atdxtz04pmazntghhznvrcve3jc4gjatzumj6m92expfe35g046j8nzl`
 - **Locking Bytecode (hex):** `aa20b5c2f56d32c4fa877d14d68bdc5360f0ccc658aa25d58b9b96b65564c14e634487`
 - **Redeem Bytecode (113 bytes):** `08cafebabe010203047576009c637500cdc0c78800ccc0c6a067519c6300cd1976a91476a04053bda0a88bda5177b86a15c3b29f55987388ac8800cc02ac0da267c0c602ac0d02f401939f6921034f355bdcb7cc0af728ef3cceb9615d90684bb5b2ca5f859ab0f0b704075871aaac6868`

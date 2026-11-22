@@ -42,7 +42,7 @@ const rawCakeSplitTemplate: XOTemplate = {
     {
       name: "CakeSplit Repository",
       description: "Source code, tests, and BCH BLAZE 2026 documentation for CakeSplit.",
-      url: "https://github.com/Rezacrown/bch-blaze-hackathon",
+      url: "https://github.com/Rezacrown/cakesplit-bch-submission",
     },
   ],
   roles: {
